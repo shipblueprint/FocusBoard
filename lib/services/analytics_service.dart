@@ -1,181 +1,130 @@
-import 'package:flutter/foundation.dart';
-import '../models/task_model.dart';
 import '../models/eisenhower_task_model.dart';
+import '../models/task_model.dart';
+import '../config/eisenhower_config.dart';
+import '../config/kanban_config.dart';
 import 'task_manager.dart';
 import 'eisenhower_task_manager.dart';
 
-class TaskAnalytics {
-  final int totalTasks;
-  final int completedTasks;
-  final int pendingTasks;
-  final int highPriorityTasks;
-  final double completionRate;
-  final Map<String, int> tasksByColumn;
-  final Map<String, int> tasksByPriority;
-  final Map<EisenhowerQuadrant, int> eisenhowerDistribution;
-  final double averageCompletionTime;
-  final DateTime lastUpdated;
+class AnalyticsService {
+  static final AnalyticsService _instance = AnalyticsService._internal();
+  factory AnalyticsService() => _instance;
+  AnalyticsService._internal();
 
-  TaskAnalytics({
-    required this.totalTasks,
-    required this.completedTasks,
-    required this.pendingTasks,
-    required this.highPriorityTasks,
-    required this.completionRate,
-    required this.tasksByColumn,
-    required this.tasksByPriority,
-    required this.eisenhowerDistribution,
-    required this.averageCompletionTime,
-    required this.lastUpdated,
-  });
-}
-
-class AnalyticsService extends ChangeNotifier {
-  final TaskManager _taskManager;
-  final EisenhowerTaskManager _eisenhowerManager;
-  TaskAnalytics? _currentAnalytics;
-
-  AnalyticsService(this._taskManager, this._eisenhowerManager);
-
-  TaskAnalytics? get currentAnalytics => _currentAnalytics;
-
-  Future<void> refreshAnalytics() async {
-    try {
-      final tasks = _taskManager.allTasks;
-      final eisenhowerTasks = _eisenhowerManager.allTasks;
-      
-      _currentAnalytics = _calculateAnalytics(tasks, eisenhowerTasks);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error refreshing analytics: $e');
-      rethrow;
-    }
-  }
-
-  TaskAnalytics _calculateAnalytics(List<Task> tasks, List<EisenhowerTask> eisenhowerTasks) {
-    final allTasks = [...tasks, ...eisenhowerTasks];
-    
-    // Basic statistics
-    final totalTasks = allTasks.length;
-    final completedTasks = allTasks.where((task) => task.isCompleted).length;
-    final pendingTasks = totalTasks - completedTasks;
-    final highPriorityTasks = allTasks.where((task) => task.isHighPriority).length;
-    final completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0.0;
-
-    // Column distribution
-    final tasksByColumn = <String, int>{};
-    for (final task in allTasks) {
-      tasksByColumn[task.column] = (tasksByColumn[task.column] ?? 0) + 1;
-    }
-
-    // Priority distribution
-    final tasksByPriority = <String, int>{
-      'High Priority': highPriorityTasks,
-      'Low Priority': totalTasks - highPriorityTasks,
-    };
-
-    // Eisenhower quadrant distribution
-    final eisenhowerDistribution = <EisenhowerQuadrant, int>{};
-    for (final quadrant in EisenhowerQuadrant.values) {
-      eisenhowerDistribution[quadrant] = 0;
-    }
-    for (final task in eisenhowerTasks) {
-      final quadrant = task.quadrant;
-      eisenhowerDistribution[quadrant] = (eisenhowerDistribution[quadrant] ?? 0) + 1;
-    }
-
-    // Average completion time (placeholder - would need timestamps for real calculation)
-    final averageCompletionTime = _calculateAverageCompletionTime(allTasks);
-
-    return TaskAnalytics(
-      totalTasks: totalTasks,
-      completedTasks: completedTasks,
-      pendingTasks: pendingTasks,
-      highPriorityTasks: highPriorityTasks,
-      completionRate: completionRate,
-      tasksByColumn: tasksByColumn,
-      tasksByPriority: tasksByPriority,
-      eisenhowerDistribution: eisenhowerDistribution,
-      averageCompletionTime: averageCompletionTime,
-      lastUpdated: DateTime.now(),
-    );
-  }
-
-  double _calculateAverageCompletionTime(List<Task> tasks) {
-    // Placeholder implementation - would need actual timestamps
-    // For now, return a default value
-    return tasks.length > 0 ? 2.5 : 0.0;
-  }
-
-  Map<String, dynamic> getQuickStats() {
-    if (_currentAnalytics == null) return {};
+  Map<String, dynamic> getKanbanAnalytics(TaskManager taskManager) {
+    final tasks = taskManager.allTasks;
     
     return {
-      'total': _currentAnalytics!.totalTasks,
-      'completed': _currentAnalytics!.completedTasks,
-      'pending': _currentAnalytics!.pendingTasks,
-      'completionRate': _currentAnalytics!.completionRate.toStringAsFixed(1),
-      'highPriority': _currentAnalytics!.highPriorityTasks,
+      'totalTasks': tasks.length,
+      'completedTasks': tasks.where((t) => t.isCompleted).length,
+      'pendingTasks': tasks.where((t) => !t.isCompleted).length,
+      'highPriorityTasks': tasks.where((t) => t.isHighPriority).length,
+      'columnDistribution': _getColumnDistribution(tasks),
+      'completionRate': tasks.isEmpty 
+          ? 0.0 
+          : (tasks.where((t) => t.isCompleted).length / tasks.length * 100),
     };
   }
 
-  List<Map<String, dynamic>> getColumnChartData() {
-    if (_currentAnalytics == null) return [];
-    
-    return _currentAnalytics!.tasksByColumn.entries
-        .map((entry) => {
-              'column': entry.key,
-              'count': entry.value,
-            })
-        .toList();
-  }
-
-  List<Map<String, dynamic>> getPriorityChartData() {
-    if (_currentAnalytics == null) return [];
-    
-    return _currentAnalytics!.tasksByPriority.entries
-        .map((entry) => {
-              'priority': entry.key,
-              'count': entry.value,
-            })
-        .toList();
-  }
-
-  List<Map<String, dynamic>> getEisenhowerChartData() {
-    if (_currentAnalytics == null) return [];
-    
-    return _currentAnalytics!.eisenhowerDistribution.entries
-        .map((entry) => {
-              'quadrant': _getQuadrantName(entry.key),
-              'count': entry.value,
-              'color': _getQuadrantColor(entry.key),
-            })
-        .toList();
-  }
-
-  String _getQuadrantName(EisenhowerQuadrant quadrant) {
-    switch (quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return 'Urgent & Important';
-      case EisenhowerQuadrant.notUrgentImportant:
-        return 'Not Urgent & Important';
-      case EisenhowerQuadrant.urgentNotImportant:
-        return 'Urgent & Not Important';
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return 'Not Urgent & Not Important';
+  Map<String, int> _getColumnDistribution(List<Task> tasks) {
+    final distribution = <String, int>{};
+    for (final column in KanbanConfig.columns) {
+      distribution[column] = tasks.where((t) => t.column == column).length;
     }
+    return distribution;
   }
 
-  String _getQuadrantColor(EisenhowerQuadrant quadrant) {
-    switch (quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return '#FF6B6B'; // Red
-      case EisenhowerQuadrant.notUrgentImportant:
-        return '#4ECDC4'; // Teal
-      case EisenhowerQuadrant.urgentNotImportant:
-        return '#FFE66D'; // Yellow
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return '#95E1D3'; // Light green
-    }
+  Map<String, dynamic> getEisenhowerAnalytics(EisenhowerTaskManager taskManager) {
+    final tasks = taskManager.allTasks;
+    
+    return {
+      'totalTasks': tasks.length,
+      'completedTasks': tasks.where((t) => t.isCompleted).length,
+      'pendingTasks': tasks.where((t) => !t.isCompleted).length,
+      'highPriorityTasks': tasks.where((t) => t.isHighPriority).length,
+      'quadrantDistribution': _getQuadrantDistribution(tasks),
+      'completionRate': tasks.isEmpty 
+          ? 0.0 
+          : (tasks.where((t) => t.isCompleted).length / tasks.length * 100),
+    };
   }
+
+  Map<String, int> _getQuadrantDistribution(List<EisenhowerTask> tasks) {
+    final distribution = <String, int>{};
+    for (final quadrant in EisenhowerQuadrant.values) {
+      final name = EisenhowerConfig.getQuadrantName(quadrant);
+      distribution[name] = tasks.where((t) => t.quadrant == quadrant).length;
+    }
+    return distribution;
+  }
+
+  Map<String, dynamic> getCombinedAnalytics(
+    TaskManager kanbanManager,
+    EisenhowerTaskManager eisenhowerManager,
+  ) {
+    final kanban = getKanbanAnalytics(kanbanManager);
+    final eisenhower = getEisenhowerAnalytics(eisenhowerManager);
+    
+    return {
+      'kanban': kanban,
+      'eisenhower': eisenhower,
+      'totalTasks': (kanban['totalTasks'] as int) + (eisenhower['totalTasks'] as int),
+      'totalCompleted': (kanban['completedTasks'] as int) + (eisenhower['completedTasks'] as int),
+      'overallCompletionRate': _calculateOverallRate(kanban, eisenhower),
+    };
+  }
+
+  double _calculateOverallRate(Map<String, dynamic> kanban, Map<String, dynamic> eisenhower) {
+    final total = (kanban['totalTasks'] as int) + (eisenhower['totalTasks'] as int);
+    if (total == 0) return 0.0;
+    
+    final completed = (kanban['completedTasks'] as int) + (eisenhower['completedTasks'] as int);
+    return (completed / total * 100);
+  }
+
+  List<ChartData> getQuadrantChartData(EisenhowerTaskManager taskManager) {
+    final data = <ChartData>[];
+    
+    for (final quadrant in EisenhowerQuadrant.values) {
+      final count = taskManager.getTasksByQuadrant(quadrant).length;
+      final name = EisenhowerConfig.getQuadrantName(quadrant);
+      final color = EisenhowerConfig.getQuadrantChartColor(quadrant);
+      
+      data.add(ChartData(
+        label: name,
+        value: count,
+        color: color,
+      ));
+    }
+    
+    return data;
+  }
+
+  List<ChartData> getColumnChartData(TaskManager taskManager) {
+    final data = <ChartData>[];
+    
+    for (final column in KanbanConfig.columns) {
+      final count = taskManager.getTasksByColumn(column).length;
+      final color = KanbanConfig.columnColors[column]?.value.toRadixString(16).substring(2) ?? '9E9E9E';
+      
+      data.add(ChartData(
+        label: column,
+        value: count,
+        color: '#$color',
+      ));
+    }
+    
+    return data;
+  }
+}
+
+class ChartData {
+  final String label;
+  final int value;
+  final String color;
+
+  ChartData({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/eisenhower_task_model.dart';
+import '../config/eisenhower_config.dart';
 import '../widgets/eisenhower_task_card.dart';
 
 class EisenhowerQuadrantWidget extends StatefulWidget {
@@ -30,74 +31,17 @@ class EisenhowerQuadrantWidget extends StatefulWidget {
 }
 
 class _EisenhowerQuadrantWidgetState extends State<EisenhowerQuadrantWidget> {
-  bool _isPasting = false;
+  String get _quadrantTitle => EisenhowerConfig.getQuadrantName(widget.quadrant);
+  String get _quadrantSubtitle => EisenhowerConfig.getQuadrantDescription(widget.quadrant);
 
-  String get _quadrantTitle {
-    switch (widget.quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return 'Do First';
-      case EisenhowerQuadrant.notUrgentImportant:
-        return 'Schedule';
-      case EisenhowerQuadrant.urgentNotImportant:
-        return 'Delegate';
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return 'Eliminate';
-    }
-  }
-
-  String get _quadrantSubtitle {
-    switch (widget.quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return 'Urgent & Important';
-      case EisenhowerQuadrant.notUrgentImportant:
-        return 'Not Urgent & Important';
-      case EisenhowerQuadrant.urgentNotImportant:
-        return 'Urgent & Not Important';
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return 'Not Urgent & Not Important';
-    }
-  }
-
-  Color _getQuadrantColor(bool isDarkMode) {
-    switch (widget.quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return isDarkMode ? Colors.green.shade800 : Colors.green.shade100;
-      case EisenhowerQuadrant.notUrgentImportant:
-        return isDarkMode ? Colors.orange.shade800 : Colors.orange.shade100;
-      case EisenhowerQuadrant.urgentNotImportant:
-        return isDarkMode ? Colors.blue.shade800 : Colors.blue.shade100;
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return isDarkMode ? Colors.red.shade800 : Colors.red.shade100;
-    }
-  }
+  Color _getQuadrantColor(bool isDarkMode) =>
+      EisenhowerConfig.getQuadrantColor(widget.quadrant, isDarkMode);
 
   void _handlePaste(String? clipboardText) {
     if (clipboardText != null && clipboardText.trim().isNotEmpty) {
       final lines = clipboardText.split('\n').where((line) => line.trim().isNotEmpty).toList();
       if (lines.isNotEmpty) {
-        // Determine urgency and importance based on quadrant
-        bool isUrgent = false;
-        bool isImportant = false;
-        
-        switch (widget.quadrant) {
-          case EisenhowerQuadrant.urgentImportant:
-            isUrgent = true;
-            isImportant = true;
-            break;
-          case EisenhowerQuadrant.notUrgentImportant:
-            isUrgent = false;
-            isImportant = true;
-            break;
-          case EisenhowerQuadrant.urgentNotImportant:
-            isUrgent = true;
-            isImportant = false;
-            break;
-          case EisenhowerQuadrant.notUrgentNotImportant:
-            isUrgent = false;
-            isImportant = false;
-            break;
-        }
-        
+        final (isUrgent, isImportant) = EisenhowerConfig.getFlagsFromQuadrant(widget.quadrant);
         widget.onTasksPasted(clipboardText, isUrgent, isImportant);
       }
     }
@@ -172,11 +116,9 @@ class _EisenhowerQuadrantWidgetState extends State<EisenhowerQuadrantWidget> {
 
     return Focus(
       onKey: (node, event) {
-        // Detect Ctrl+V or Cmd+V paste
         if (event is RawKeyDownEvent && 
             (event.logicalKey == LogicalKeyboardKey.keyV) &&
             (event.isControlPressed || event.isMetaPressed)) {
-          // Use a microtask to handle the async dialog
           Future.microtask(() => _showPasteDialog());
           return KeyEventResult.handled;
         }
@@ -306,7 +248,7 @@ class _EisenhowerQuadrantWidgetState extends State<EisenhowerQuadrantWidget> {
                                     onTaskDeleted: widget.onTaskDeleted,
                                     onTaskToggled: widget.onTaskToggled,
                                     onTaskEdited: widget.onTaskEdited,
-                                    enableExternalDrag: true, // Enable external drag for moving between quadrants
+                                    enableExternalDrag: true,
                                     enableInternalReorder: true,
                                   ),
                               ],

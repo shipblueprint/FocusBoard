@@ -1,196 +1,126 @@
-import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'web_storage.dart';
 import '../models/task_model.dart';
+import '../config/kanban_config.dart';
+import 'base_task_manager.dart';
 
-class TaskManager {
-  List<Task> _tasks = [];
-  late File _taskFile;
+class TaskManager extends BaseTaskManager<Task> {
+  static final TaskManager _instance = TaskManager._internal();
+  factory TaskManager() => _instance;
+  TaskManager._internal();
+
+  @override
+  String get storageKey => 'kanban_tasks';
   
-  // Cache for column tasks to improve performance
-  final Map<String, List<Task>> _columnCache = {};
-  bool _cacheValid = false;
+  @override
+  String get fileName => 'tasks.json';
+  
+  @override
+  Task Function(Map<String, dynamic>) get fromJsonFactory => Task.fromJson;
 
-  Future<void> loadTasks() async {
-    try {
-      if (kIsWeb) {
-        // Use web storage for web platform
-        final jsonString = await WebStorage.loadKanbanTasks();
-        if (jsonString != null) {
-          final tasksJson = json.decode(jsonString) as List;
-          _tasks = tasksJson.map((json) => Task.fromJson(json)).toList();
-        } else {
-          _tasks = [];
-        }
-      } else {
-        // Use file storage for mobile/desktop platforms
-        final directory = await getApplicationDocumentsDirectory();
-        _taskFile = File('${directory.path}/kanban_tasks.json');
-        if (await _taskFile.exists()) {
-          final jsonString = await _taskFile.readAsString();
-          final tasksJson = json.decode(jsonString) as List;
-          _tasks = tasksJson.map((json) => Task.fromJson(json)).toList();
-        }
-      }
-      // Invalidate cache when tasks are loaded
-      _cacheValid = false;
-    } catch (e) {
-      // Handle errors gracefully with fallback to empty tasks
-      debugPrint('Error loading tasks: $e');
-      _tasks = [];
-      
-      // Re-throw to allow UI to show error notification
-      throw Exception('Failed to load tasks: ${e.toString()}');
-    }
+  @override
+  Map<String, dynamic> toJson(Task task) => task.toJson();
+
+  List<Task> getTasksByColumn(String column) {
+    return allTasks.where((task) => task.column == column).toList();
   }
 
-  List<Task> get allTasks => List.unmodifiable(_tasks);
+  List<Task> get pendingTasks =>
+      allTasks.where((task) => !task.isCompleted).toList();
 
-  void addTask(String title, String column) {
-    final task = Task(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      column: column,
-    );
-    _tasks.add(task);
-    _cacheValid = false; // Invalidate cache
-    saveTasks();
+  List<Task> get completedTasks =>
+      allTasks.where((task) => task.isCompleted).toList();
+
+  List<Task> get highPriorityTasks =>
+      allTasks.where((task) => task.isHighPriority && !task.isCompleted).toList();
+
+  int getWipCount(String column) {
+    return getTasksByColumn(column).where((t) => !t.isCompleted).length;
   }
 
-  void editTask(Task task, String newTitle) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      // 直接更新标题，让toString方法处理前缀
-      _tasks[index] = task.copyWith(title: newTitle);
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
-    }
+  bool isWipLimitReached(String column) {
+    final limit = KanbanConfig.getWipLimit(column);
+    if (limit == null) return false;
+    return getWipCount(column) >= limit;
+  }
+
+  void addTask(Task task) {
+    addTaskDirect(task);
   }
 
   void deleteTask(Task task) {
-    _tasks.removeWhere((t) => t.id == task.id);
-    _cacheValid = false; // Invalidate cache
-    saveTasks();
+    removeTaskWhere((t) => t.id == task.id);
   }
 
-  void updateTask(Task task, {String? title, bool? isCompleted, bool? isHighPriority}) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
+  void updateTask(Task task) {
+    final index = findTaskIndex((t) => t.id == task.id);
     if (index != -1) {
-      _tasks[index] = task.copyWith(
-        title: title,
-        isCompleted: isCompleted,
-        isHighPriority: isHighPriority,
-      );
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
-    }
-  }
-
-  void moveTask(Task task, String newColumn) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      // 更新任务信息，让toString方法来处理前缀
-      _tasks[index] = task.copyWith(
-        column: newColumn,
-        isCompleted: newColumn == 'Done' ? true : task.isCompleted,
-      );
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
+      updateTaskAtIndex(index, task);
     }
   }
 
   void markTaskCompleted(Task task) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
+    final index = findTaskIndex((t) => t.id == task.id);
     if (index != -1) {
-      _tasks[index] = task.copyWith(
-        column: 'Done',
-        isCompleted: true,
-      );
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
-    }
-  }
-
-  void unmarkTaskCompleted(Task task) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      _tasks[index] = task.copyWith(
-        column: 'To Do',
-        isCompleted: false,
-      );
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
+      updateTaskAtIndex(index, task.copyWith(isCompleted: true, column: KanbanConfig.columns.last));
     }
   }
 
   void setTaskPriority(Task task, bool isHighPriority) {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
+    final index = findTaskIndex((t) => t.id == task.id);
     if (index != -1) {
-      _tasks[index] = task.copyWith(
-        isHighPriority: isHighPriority,
-      );
-      _cacheValid = false; // Invalidate cache
-      saveTasks();
+      updateTaskAtIndex(index, task.copyWith(isHighPriority: isHighPriority));
     }
   }
 
-  bool checkWipLimit(String column, int? limit) {
-      if (limit == null) return true;
-      return getTasksInColumn(column).length < limit;
-    }
-
-  List<Task> getTasksInColumn(String column) {
-    // Use cache if available
-    if (_cacheValid && _columnCache.containsKey(column)) {
-      return _columnCache[column]!;
-    }
+  void moveTask(Task task, String newColumn) {
+    if (!KanbanConfig.isValidColumn(newColumn)) return;
     
-    // Build cache if not available
-    _columnCache.clear();
-    for (final task in _tasks) {
-      _columnCache.putIfAbsent(task.column, () => []).add(task);
+    final index = findTaskIndex((t) => t.id == task.id);
+    if (index != -1) {
+      updateTaskAtIndex(index, task.copyWith(column: newColumn));
     }
-    _cacheValid = true;
-    
-    return _columnCache[column] ?? [];
   }
 
-  int getCompletedTasksCount() {
-      return getTasksInColumn('Done').length;
+  void restoreTask(Task task) {
+    final index = findTaskIndex((t) => t.id == task.id);
+    if (index != -1) {
+      updateTaskAtIndex(index, task.copyWith(
+        isCompleted: false,
+        column: KanbanConfig.getDefaultColumn(),
+      ));
     }
+  }
 
-  Future<void> saveTasks() async {
-    try {
-      final tasksJson = _tasks.map((task) => task.toJson()).toList();
-      final jsonEncoder = JsonEncoder.withIndent('  ');
-      final jsonString = jsonEncoder.convert(tasksJson);
+  void reorderTasks(String column, int oldIndex, int newIndex) {
+    final columnTasks = getTasksByColumn(column);
+    if (oldIndex < columnTasks.length && newIndex < columnTasks.length) {
+      final task = columnTasks[oldIndex];
+      final allTasksList = List<Task>.from(allTasks);
+      final actualOldIndex = allTasksList.indexWhere((t) => t.id == task.id);
       
-      if (kIsWeb) {
-        // Use web storage for web platform
-        await WebStorage.saveKanbanTasks(jsonString);
-      } else {
-        // Use file storage for mobile/desktop platforms
-        await _taskFile.writeAsString(jsonString);
+      if (actualOldIndex != -1) {
+        allTasksList.removeAt(actualOldIndex);
+        
+        int actualNewIndex = allTasksList.indexWhere((t) => 
+            t.column == column && 
+            allTasksList.indexOf(t) >= newIndex);
+        
+        if (actualNewIndex == -1) {
+          actualNewIndex = allTasksList.length;
+        }
+        
+        allTasksList.insert(actualNewIndex, task);
+        tasksInternal = allTasksList;
+        cacheValid = false;
+        saveTasks();
       }
-    } catch (e) {
-      debugPrint('Error saving tasks: $e');
-      // Re-throw to allow UI to show error notification
-      throw Exception('Failed to save tasks: ${e.toString()}');
     }
   }
 
-  void clearDoneColumn() {
-    _tasks.removeWhere((task) => task.column == 'Done');
-    _cacheValid = false; // Invalidate cache
-    saveTasks();
-  }
-
-  void addTaskDirect(Task task) {
-    _tasks.add(task);
-    _cacheValid = false; // Invalidate cache
-    saveTasks();
+  Task? findTaskById(String id) {
+    final tasks = allTasks;
+    for (final task in tasks) {
+      if (task.id == id) return task;
+    }
+    return null;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
+import '../config/kanban_config.dart';
 
 class KanbanColumn extends StatelessWidget {
   final String title;
@@ -14,7 +15,7 @@ class KanbanColumn extends StatelessWidget {
   final bool showAddButton;
   final int? wipLimit;
   final Function(int)? onWipLimitChange;
-  final Function(Task, String)? onDragReceived; // 更新为包含目标列的回调
+  final Function(Task, String)? onDragReceived;
 
   const KanbanColumn({
     super.key,
@@ -36,7 +37,7 @@ class KanbanColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(minWidth: 280, minHeight: double.infinity),
+      constraints: const BoxConstraints(minWidth: 280, minHeight: double.infinity),
       child: Container(
         width: double.infinity,
         height: double.infinity,
@@ -49,7 +50,6 @@ class KanbanColumn extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 列标题
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -62,13 +62,23 @@ class KanbanColumn extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        KanbanConfig.columnIcons[title] ?? Icons.list,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     '${tasks.length}${wipLimit != null ? '/$wipLimit' : ''}',
@@ -78,40 +88,34 @@ class KanbanColumn extends StatelessWidget {
               ),
             ),
 
-            // 任务列表区域
             Expanded(
               flex: 1,
               child: DragTarget<Task>(
                 onAcceptWithDetails: (details) {
-          if (onDragReceived != null) {
-            // 不允许从Done列移动任务到其他列
-            if (details.data.column == 'Done' && title != 'Done') {
-              return;
-            }
-            
-            // 其他情况检查列不同且未达到WIP限制
-            if (details.data.column != title &&
-                (wipLimit == null || tasks.length < wipLimit!)) {
-              // 将目标列传递给父组件
-              onDragReceived!(details.data, title);
-            }
-          }
-        },
+                  if (onDragReceived != null) {
+                    if (details.data.column == KanbanConfig.columns.last && title != KanbanConfig.columns.last) {
+                      return;
+                    }
+                    
+                    if (details.data.column != title &&
+                        (wipLimit == null || tasks.length < wipLimit!)) {
+                      onDragReceived!(details.data, title);
+                    }
+                  }
+                },
                 onWillAcceptWithDetails: (details) {
-          // 不允许从Done列移动任务到其他列
-          if (details.data.column == 'Done' && title != 'Done') {
-            return false;
-          }
-          
-          // 其他情况检查列不同且未达到WIP限制
-          return details.data.column != title &&
-              (wipLimit == null || tasks.length < wipLimit!);
-        },
+                  if (details.data.column == KanbanConfig.columns.last && title != KanbanConfig.columns.last) {
+                    return false;
+                  }
+                  
+                  return details.data.column != title &&
+                      (wipLimit == null || tasks.length < wipLimit!);
+                },
                 builder: (context, candidateData, rejectedData) {
                   return Container(
                     color: candidateData.isNotEmpty ? Colors.grey.shade700 : null,
                     child: ListView.builder(
-                      padding: EdgeInsets.all(8), // Add padding around the list
+                      padding: const EdgeInsets.all(8),
                       itemCount: tasks.length,
                       itemBuilder: (context, index) {
                         final task = tasks[index];
@@ -122,14 +126,14 @@ class KanbanColumn extends StatelessWidget {
                             child: Container(
                               width: MediaQuery.of(context).size.width / 4,
                               decoration: BoxDecoration(
-                                    color: Colors.grey.shade800.withAlpha(242),
-                                    borderRadius: BorderRadius.circular(8.0),
+                                color: Colors.grey.shade800.withAlpha(242),
+                                borderRadius: BorderRadius.circular(8.0),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withAlpha(128),
                                     spreadRadius: 3,
                                     blurRadius: 5,
-                                    offset: Offset(0, 3),
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
@@ -138,90 +142,85 @@ class KanbanColumn extends StatelessWidget {
                                 task.toString(),
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight:
-                                      task.isHighPriority
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                  color:
-                                      task.isHighPriority
-                                          ? Colors.red.shade500
-                                          : Colors.grey.shade100,
+                                  fontWeight: task.isHighPriority
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: task.isHighPriority
+                                      ? Colors.red.shade500
+                                      : Colors.grey.shade100,
                                 ),
                               ),
                             ),
                           ),
                           child: GestureDetector(
                             onTap: () => onTaskTap(task),
-                              onLongPress: () => onTaskLongPress(task),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6.0), // Increase vertical spacing
-                                padding: const EdgeInsets.all(16.0), // Increase padding for better touch targets
+                            onLongPress: () => onTaskLongPress(task),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6.0),
+                              padding: const EdgeInsets.all(16.0),
                               decoration: BoxDecoration(
-                                    color: Colors.grey.shade800.withAlpha(242),
-                                    borderRadius: BorderRadius.circular(10.0),
-                                    border: Border.all(
-                                      color:
-                                          task.isHighPriority
-                                              ? Colors.red.withAlpha(179)
-                                              : Colors.grey.withAlpha(128),
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(25),
-                                        spreadRadius: 1,
-                                        blurRadius: 3,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ]
+                                color: Colors.grey.shade800.withAlpha(242),
+                                borderRadius: BorderRadius.circular(10.0),
+                                border: Border.all(
+                                  color: task.isHighPriority
+                                      ? Colors.red.withAlpha(179)
+                                      : Colors.grey.withAlpha(128),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(25),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1),
                                   ),
-                                child: Row(
+                                ],
+                              ),
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Expanded(
                                     child: Text(
                                       task.toString(),
                                       style: TextStyle(
-                                        fontSize: 18, // Increase font size for better readability
-                                        fontWeight:
-                                            task.isHighPriority
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                        color:
-                                              task.isHighPriority
-                                                  ? Colors.red.shade500
-                                                  : Colors.grey.shade100,
-                                        ),
-                                        maxLines: 3, // Allow more lines to show more content
+                                        fontSize: 18,
+                                        fontWeight: task.isHighPriority
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: task.isHighPriority
+                                            ? Colors.red.shade500
+                                            : Colors.grey.shade100,
+                                      ),
+                                      maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                SizedBox(width: 4),
-                                IconButton(
-                                   icon: Icon(
-                                     task.isHighPriority ? Icons.flag : Icons.flag_outlined,
-                                     size: 16,
-                                     color: task.isHighPriority ? Colors.red : Colors.grey,
-                                   ),
-                                  onPressed: () => onTogglePriority(task),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  tooltip: task.isHighPriority ? 'Remove priority' : 'Set as high priority',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
-                                  onPressed: () => onTaskEdit(task),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  tooltip: 'Edit task',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                                  onPressed: () => onTaskDelete(task),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  tooltip: 'Delete task',
-                                ),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: Icon(
+                                      task.isHighPriority ? Icons.flag : Icons.flag_outlined,
+                                      size: 16,
+                                      color: task.isHighPriority ? Colors.red : Colors.grey,
+                                    ),
+                                    onPressed: () => onTogglePriority(task),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: task.isHighPriority ? 'Remove priority' : 'Set as high priority',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
+                                    onPressed: () => onTaskEdit(task),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Edit task',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                                    onPressed: () => onTaskDelete(task),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Delete task',
+                                  ),
                                 ],
                               ),
                             ),
@@ -234,8 +233,7 @@ class KanbanColumn extends StatelessWidget {
               ),
             ),
 
-            // 添加任务按钮和WIP限制（仅To Do列）
-            if (showAddButton && title == 'To Do') ...[
+            if (showAddButton && title == KanbanConfig.columns.first) ...[
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.all(8),

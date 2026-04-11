@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
+import '../config/eisenhower_config.dart';
 import 'task_model.dart';
-
-enum EisenhowerQuadrant {
-  urgentImportant,
-  notUrgentImportant,
-  urgentNotImportant,
-  notUrgentNotImportant,
-}
 
 class EisenhowerTask extends Task {
   bool isUrgent;
   bool isImportant;
 
-  EisenhowerQuadrant get quadrant {
-    if (isUrgent && isImportant) return EisenhowerQuadrant.urgentImportant;
-    if (!isUrgent && isImportant) return EisenhowerQuadrant.notUrgentImportant;
-    if (isUrgent && !isImportant) return EisenhowerQuadrant.urgentNotImportant;
-    return EisenhowerQuadrant.notUrgentNotImportant;
-  }
+  EisenhowerQuadrant get quadrant =>
+      EisenhowerConfig.getQuadrantFromFlags(isUrgent, isImportant);
 
   EisenhowerTask({
     required super.id,
@@ -29,7 +19,8 @@ class EisenhowerTask extends Task {
     this.isImportant = false,
   });
 
-  factory EisenhowerTask.fromTask(Task task, {bool isUrgent = false, bool isImportant = false}) {
+  factory EisenhowerTask.fromTask(Task task,
+      {bool isUrgent = false, bool isImportant = false}) {
     return EisenhowerTask(
       id: task.id,
       title: task.title,
@@ -51,37 +42,26 @@ class EisenhowerTask extends Task {
   }
 
   factory EisenhowerTask.fromJson(Map<String, dynamic> json) {
-    // Validate and sanitize input data
     if (json['id'] == null || json['id'].toString().isEmpty) {
       throw ArgumentError('EisenhowerTask ID cannot be null or empty');
     }
-    
+
     if (json['title'] == null || json['title'].toString().trim().isEmpty) {
       throw ArgumentError('EisenhowerTask title cannot be null or empty');
     }
-    
-    // Sanitize title to prevent XSS and UI issues
+
     String sanitizedTitle = json['title'].toString().trim();
-    // Remove any potential HTML/script tags
     sanitizedTitle = sanitizedTitle.replaceAll(RegExp(r'<[^>]*>'), '');
-    // Limit title length to prevent UI overflow
     if (sanitizedTitle.length > 200) {
-      sanitizedTitle = sanitizedTitle.substring(0, 197) + '...';
+      sanitizedTitle = '${sanitizedTitle.substring(0, 197)}...';
     }
-    
-    // Validate column name
-    String column = json['column'] ?? 'Eisenhower';
-    const validColumns = ['Eisenhower'];
-    if (!validColumns.contains(column)) {
-      column = 'Eisenhower'; // Default to safe value
-    }
-    
+
     return EisenhowerTask(
       id: json['id'].toString(),
       title: sanitizedTitle,
       isCompleted: json['isCompleted'] == true,
       isHighPriority: json['isHighPriority'] == true,
-      column: column,
+      column: 'Eisenhower',
       isUrgent: json['isUrgent'] == true,
       isImportant: json['isImportant'] == true,
     );
@@ -108,29 +88,8 @@ class EisenhowerTask extends Task {
     );
   }
 
-  String get quadrantName {
-    switch (quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return 'Do First';
-      case EisenhowerQuadrant.notUrgentImportant:
-        return 'Schedule';
-      case EisenhowerQuadrant.urgentNotImportant:
-        return 'Delegate';
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return 'Eliminate';
-    }
-  }
+  String get quadrantName => EisenhowerConfig.getQuadrantName(quadrant);
 
-  Color getQuadrantColor(bool isDarkMode) {
-    switch (quadrant) {
-      case EisenhowerQuadrant.urgentImportant:
-        return isDarkMode ? Colors.red.shade800 : Colors.red.shade100;
-      case EisenhowerQuadrant.notUrgentImportant:
-        return isDarkMode ? Colors.green.shade800 : Colors.green.shade100;
-      case EisenhowerQuadrant.urgentNotImportant:
-        return isDarkMode ? Colors.orange.shade800 : Colors.orange.shade100;
-      case EisenhowerQuadrant.notUrgentNotImportant:
-        return isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100;
-    }
-  }
+  Color getQuadrantColor(bool isDarkMode) =>
+      EisenhowerConfig.getQuadrantColor(quadrant, isDarkMode);
 }

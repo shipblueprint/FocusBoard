@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../services/analytics_service.dart';
 import '../services/task_manager.dart';
 import '../services/eisenhower_task_manager.dart';
+import '../config/kanban_config.dart';
+import '../config/eisenhower_config.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -13,6 +14,8 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   late AnalyticsService _analyticsService;
+  late TaskManager _taskManager;
+  late EisenhowerTaskManager _eisenhowerManager;
   bool _isLoading = true;
   String? _error;
 
@@ -24,14 +27,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Future<void> _initializeAnalytics() async {
     try {
-      final taskManager = TaskManager();
-      final eisenhowerManager = EisenhowerTaskManager();
+      _taskManager = TaskManager();
+      _eisenhowerManager = EisenhowerTaskManager();
+      _analyticsService = AnalyticsService();
       
-      await taskManager.loadTasks();
-      await eisenhowerManager.loadTasks();
-      
-      _analyticsService = AnalyticsService(taskManager, eisenhowerManager);
-      await _analyticsService.refreshAnalytics();
+      await _taskManager.loadTasks();
+      await _eisenhowerManager.loadTasks();
       
       setState(() {
         _isLoading = false;
@@ -76,24 +77,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildAnalyticsContent() {
-    final stats = _analyticsService.getQuickStats();
+    final kanbanStats = _analyticsService.getKanbanAnalytics(_taskManager);
+    final eisenhowerStats = _analyticsService.getEisenhowerAnalytics(_eisenhowerManager);
+    final combinedStats = _analyticsService.getCombinedAnalytics(_taskManager, _eisenhowerManager);
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSummaryCards(stats),
+          _buildSummaryCards(combinedStats),
           const SizedBox(height: 24),
-          _buildCompletionChart(),
+          _buildCompletionChart(combinedStats),
           const SizedBox(height: 24),
-          _buildColumnDistribution(),
+          _buildColumnDistribution(kanbanStats),
           const SizedBox(height: 24),
-          _buildPriorityAnalysis(),
+          _buildPriorityAnalysis(kanbanStats),
           const SizedBox(height: 24),
-          _buildEisenhowerAnalysis(),
-          const SizedBox(height: 16),
-          _buildLastUpdated(),
+          _buildEisenhowerAnalysis(eisenhowerStats),
         ],
       ),
     );
@@ -108,10 +109,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        _buildSummaryCard('Total Tasks', stats['total']?.toString() ?? '0', Colors.blue),
-        _buildSummaryCard('Completed', stats['completed']?.toString() ?? '0', Colors.green),
-        _buildSummaryCard('Pending', stats['pending']?.toString() ?? '0', Colors.orange),
-        _buildSummaryCard('Completion Rate', '${stats['completionRate'] ?? '0.0'}%', Colors.purple),
+        _buildSummaryCard('Total Tasks', stats['totalTasks']?.toString() ?? '0', Colors.blue),
+        _buildSummaryCard('Completed', stats['totalCompleted']?.toString() ?? '0', Colors.green),
+        _buildSummaryCard('Pending', ((stats['totalTasks'] as int) - (stats['totalCompleted'] as int)).toString(), Colors.orange),
+        _buildSummaryCard('Completion Rate', '${(stats['overallCompletionRate'] as double).toStringAsFixed(1)}%', Colors.purple),
       ],
     );
   }
@@ -156,9 +157,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildCompletionChart() {
-    final stats = _analyticsService.getQuickStats();
-    final completionRate = double.tryParse(stats['completionRate']?.toString() ?? '0') ?? 0;
+  Widget _buildCompletionChart(Map<String, dynamic> stats) {
+    final completionRate = stats['overallCompletionRate'] as double;
     
     return Card(
       elevation: 2,
@@ -195,8 +195,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildColumnDistribution() {
-    final columnData = _analyticsService.getColumnChartData();
+  Widget _buildColumnDistribution(Map<String, dynamic> stats) {
+    final distribution = stats['columnDistribution'] as Map<String, int>;
+    final total = distribution.values.fold(0, (sum, count) => sum + count);
     
     return Card(
       elevation: 2,
@@ -210,10 +211,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...columnData.map((data) => _buildBarChartItem(
-              data['column'] as String,
-              data['count'] as int,
-              columnData.fold(0, (sum, item) => sum + (item['count'] as int)),
+            ...KanbanConfig.columns.map((column) => _buildBarChartItem(
+              column,
+              distribution[column] ?? 0,
+              total,
+              KanbanConfig.columnColors[column] ?? Colors.grey,
             )),
           ],
         ),
@@ -221,8 +223,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildPriorityAnalysis() {
-    final priorityData = _analyticsService.getPriorityChartData();
+  Widget _buildPriorityAnalysis(Map<String, dynamic> stats) {
+    final highPriority = stats['highPriorityTasks'] as int;
+    final total = stats['totalTasks'] as int;
+    final normal = total - highPriority;
     
     return Card(
       elevation: 2,
@@ -236,22 +240,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...priorityData.map((data) => _buildPieChartItem(
-              data['priority'] as String,
-              data['count'] as int,
-              priorityData.fold(0, (sum, item) => sum + (item['count'] as int)),
-              data['priority'] == 'High Priority' ? Colors.red : Colors.blue,
-            )),
+            _buildPieChartItem('High Priority', highPriority, total, Colors.red),
+            _buildPieChartItem('Normal', normal, total, Colors.blue),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEisenhowerAnalysis() {
-    final eisenhowerData = _analyticsService.getEisenhowerChartData();
+  Widget _buildEisenhowerAnalysis(Map<String, dynamic> stats) {
+    final distribution = stats['quadrantDistribution'] as Map<String, int>;
+    final total = distribution.values.fold(0, (sum, count) => sum + count);
     
-    if (eisenhowerData.isEmpty) return const SizedBox.shrink();
+    if (total == 0) return const SizedBox.shrink();
     
     return Card(
       elevation: 2,
@@ -265,19 +266,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...eisenhowerData.map((data) => _buildPieChartItem(
-              data['quadrant'] as String,
-              data['count'] as int,
-              eisenhowerData.fold(0, (sum, item) => sum + (item['count'] as int)),
-              Color(int.parse((data['color'] as String).substring(1), radix: 16) + 0xFF000000),
-            )),
+            ...EisenhowerQuadrant.values.map((quadrant) {
+              final name = EisenhowerConfig.getQuadrantName(quadrant);
+              return _buildPieChartItem(
+                name,
+                distribution[name] ?? 0,
+                total,
+                EisenhowerConfig.getQuadrantColor(quadrant, false),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBarChartItem(String label, int value, int total) {
+  Widget _buildBarChartItem(String label, int value, int total, Color color) {
     final percentage = total > 0 ? (value / total) : 0.0;
     
     return Padding(
@@ -288,7 +292,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+              Row(
+                children: [
+                  Icon(KanbanConfig.columnIcons[label] ?? Icons.list, size: 16, color: color),
+                  const SizedBox(width: 8),
+                  Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+                ],
+              ),
               Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
@@ -299,7 +309,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               value: percentage,
               minHeight: 8,
               backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple.shade400),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
         ],
@@ -331,25 +341,5 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildLastUpdated() {
-    final lastUpdated = _analyticsService.currentAnalytics?.lastUpdated;
-    
-    if (lastUpdated == null) return const SizedBox.shrink();
-    
-    return Center(
-      child: Text(
-        'Last updated: ${_formatDateTime(lastUpdated)}',
-        style: TextStyle(
-          color: Colors.grey.shade600,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')} ${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }

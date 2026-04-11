@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/eisenhower_task_model.dart';
+import '../config/eisenhower_config.dart';
 
 class EisenhowerTaskCard extends StatelessWidget {
   final EisenhowerTask task;
@@ -161,6 +162,7 @@ class EisenhowerTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final quadrantColor = EisenhowerConfig.getQuadrantColor(quadrant, isDarkMode);
     
     final cardContent = Card(
       elevation: 2,
@@ -224,10 +226,7 @@ class EisenhowerTaskCard extends StatelessWidget {
       ),
     );
     
-    // For internal reordering in ReorderableListView, we need to handle dragging differently
     if (enableInternalReorder) {
-      // When both internal reorder and external drag are enabled, 
-      // we need to make the entire card draggable for external drag
       if (enableExternalDrag) {
         return Draggable<Map<String, dynamic>>(
           data: {
@@ -241,7 +240,7 @@ class EisenhowerTaskCard extends StatelessWidget {
               width: 200,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: task.getQuadrantColor(isDarkMode),
+                color: quadrantColor,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: Colors.grey.shade400,
@@ -260,11 +259,9 @@ class EisenhowerTaskCard extends StatelessWidget {
           child: cardContent,
         );
       }
-      // If only internal reorder is enabled, return the card content directly
       return cardContent;
     }
     
-    // If only external dragging is enabled, wrap in Draggable
     if (enableExternalDrag) {
       return Draggable<Map<String, dynamic>>(
         data: {
@@ -278,7 +275,7 @@ class EisenhowerTaskCard extends StatelessWidget {
             width: 200,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: task.getQuadrantColor(isDarkMode),
+              color: quadrantColor,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Colors.grey.shade400,
