@@ -1,0 +1,31 @@
+name: app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.0
+  shared_preferences: ^2.2.2
+  flutter_launcher_icons: ^0.13.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - icon.png
+
+flutter_launcher_icons:
+  image_path: "icon.png"
+  android:
+    generate: true
+    foreground_image_path: "icon.png"
+    adaptive_icon_background: "#ffffff"
