@@ -1,7 +1,8 @@
 import 'eisenhower_task_manager.dart';
 import 'task_manager.dart';
-import '../models/eisenhower_task_model.dart';
 import '../models/task_model.dart';
+import '../config/eisenhower_config.dart';
+import '../config/kanban_config.dart';
 
 class TaskTransferService {
   final EisenhowerTaskManager eisenhowerTaskManager;
@@ -13,38 +14,33 @@ class TaskTransferService {
   });
 
   Future<void> transferDoFirstTasksToKanban() async {
-    // Get all "Do First" tasks from Eisenhower board
-    final doFirstTasks = eisenhowerTaskManager.getDoFirstTasks();
+    final doFirstTasks = eisenhowerTaskManager.urgentImportantTasks;
     
     if (doFirstTasks.isEmpty) {
-      return; // No tasks to transfer
+      return;
     }
 
-    // Transfer each task to Kanban board's "To Do" column
     for (final eisenhowerTask in doFirstTasks) {
-      // Create a new Kanban task from the Eisenhower task
       final kanbanTask = Task(
-        id: eisenhowerTask.id, // Keep the same ID for consistency
+        id: eisenhowerTask.id,
         title: eisenhowerTask.title,
         isCompleted: eisenhowerTask.isCompleted,
         isHighPriority: eisenhowerTask.isHighPriority || 
-                        (eisenhowerTask.isUrgent && eisenhowerTask.isImportant), // Mark as high priority if it's Do First
-        column: 'To Do', // Transfer to "To Do" column in Kanban
+                        (eisenhowerTask.isUrgent && eisenhowerTask.isImportant),
+        column: KanbanConfig.getDefaultColumn(),
       );
       
-      // Add to Kanban board
-      kanbanTaskManager.addTaskDirect(kanbanTask);
+      kanbanTaskManager.addTask(kanbanTask);
     }
 
-    // Remove the transferred tasks from Eisenhower board
-    eisenhowerTaskManager.removeTasks(doFirstTasks);
+    eisenhowerTaskManager.removeTaskWhere((t) => 
+        t.quadrant == EisenhowerQuadrant.urgentImportant);
     
-    // Save both managers
     await eisenhowerTaskManager.saveTasks();
     await kanbanTaskManager.saveTasks();
   }
 
   int getDoFirstTasksCount() {
-    return eisenhowerTaskManager.getDoFirstTasks().length;
+    return eisenhowerTaskManager.urgentImportantTasks.length;
   }
 }

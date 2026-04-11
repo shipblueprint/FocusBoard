@@ -1,3 +1,5 @@
+import '../config/kanban_config.dart';
+
 class Task {
   String id;
   String title;
@@ -24,31 +26,25 @@ class Task {
   }
 
   factory Task.fromJson(Map<String, dynamic> json) {
-    // Validate and sanitize input data
     if (json['id'] == null || json['id'].toString().isEmpty) {
       throw ArgumentError('Task ID cannot be null or empty');
     }
-    
+
     if (json['title'] == null || json['title'].toString().trim().isEmpty) {
       throw ArgumentError('Task title cannot be null or empty');
     }
-    
-    // Sanitize title to prevent XSS and UI issues
+
     String sanitizedTitle = json['title'].toString().trim();
-    // Remove any potential HTML/script tags
     sanitizedTitle = sanitizedTitle.replaceAll(RegExp(r'<[^>]*>'), '');
-    // Limit title length to prevent UI overflow
     if (sanitizedTitle.length > 200) {
-      sanitizedTitle = sanitizedTitle.substring(0, 197) + '...';
+      sanitizedTitle = '${sanitizedTitle.substring(0, 197)}...';
     }
-    
-    // Validate column name
-    String column = json['column'] ?? 'To Do';
-    const validColumns = ['To Do', 'In Progress', 'Done', 'Eisenhower'];
-    if (!validColumns.contains(column)) {
-      column = 'To Do'; // Default to safe value
+
+    String column = json['column'] ?? KanbanConfig.getDefaultColumn();
+    if (!KanbanConfig.isValidColumn(column)) {
+      column = KanbanConfig.getDefaultColumn();
     }
-    
+
     return Task(
       id: json['id'].toString(),
       title: sanitizedTitle,
@@ -60,10 +56,11 @@ class Task {
 
   @override
   String toString() {
-    String prefix = '';
-    if (isCompleted) prefix += '[Completed] ';
-    if (isHighPriority) prefix += '[High Priority] ';
-    return '$prefix$title';
+    final buffer = StringBuffer();
+    if (isCompleted) buffer.write('[Completed] ');
+    if (isHighPriority) buffer.write('[High Priority] ');
+    buffer.write(title);
+    return buffer.toString();
   }
 
   Task copyWith({

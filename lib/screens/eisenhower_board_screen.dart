@@ -3,6 +3,7 @@ import '../models/eisenhower_task_model.dart';
 import '../services/eisenhower_task_manager.dart';
 import '../services/task_manager.dart';
 import '../services/task_transfer_service.dart';
+import '../config/eisenhower_config.dart';
 import '../widgets/eisenhower_quadrant.dart';
 
 class EisenhowerBoardScreen extends StatefulWidget {
@@ -96,13 +97,14 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
             ElevatedButton(
               onPressed: () {
                 if (controller.text.trim().isNotEmpty) {
-                  _taskManager.addTask(
-                    controller.text.trim(),
+                  final task = EisenhowerTask(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    title: controller.text.trim(),
                     isUrgent: isUrgent,
                     isImportant: isImportant,
                   );
+                  _taskManager.addTask(task);
                   Navigator.pop(context);
-                  // Update the parent screen state
                   setState(() {});
                 }
               },
@@ -125,47 +127,42 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
   }
 
   void _onTaskToggled(EisenhowerTask task) {
-    _taskManager.toggleTaskCompletion(task);
+    _taskManager.markTaskCompleted(task);
     setState(() {});
   }
 
   void _onTaskEdited(EisenhowerTask task, String newTitle) {
-    _taskManager.editTask(task, newTitle);
+    _taskManager.updateTask(task.copyWith(title: newTitle));
     setState(() {});
   }
 
   void _onTaskReordered(EisenhowerQuadrant quadrant, int oldIndex, int newIndex) {
-    _taskManager.reorderTasksInQuadrant(quadrant, oldIndex, newIndex);
     setState(() {});
   }
 
   void _onTasksPasted(String text, bool isUrgent, bool isImportant) {
-    // Determine quadrant based on urgency and importance
-    EisenhowerQuadrant quadrant;
-    if (isUrgent && isImportant) {
-      quadrant = EisenhowerQuadrant.urgentImportant;
-    } else if (!isUrgent && isImportant) {
-      quadrant = EisenhowerQuadrant.notUrgentImportant;
-    } else if (isUrgent && !isImportant) {
-      quadrant = EisenhowerQuadrant.urgentNotImportant;
-    } else {
-      quadrant = EisenhowerQuadrant.notUrgentNotImportant;
-    }
-    
-    final taskCount = _taskManager.addTasksFromText(text, isUrgent: isUrgent, isImportant: isImportant);
-    if (taskCount > 0) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added $taskCount new task${taskCount > 1 ? "s" : ""} to ${quadrant.name}'),
-          backgroundColor: Colors.green,
-        ),
+    final lines = text.split('\n').where((line) => line.trim().isNotEmpty);
+    for (final line in lines) {
+      final task = EisenhowerTask(
+        id: '${DateTime.now().millisecondsSinceEpoch}_${line.hashCode}',
+        title: line.trim(),
+        isUrgent: isUrgent,
+        isImportant: isImportant,
       );
+      _taskManager.addTask(task);
     }
+    setState(() {});
+    final quadrant = EisenhowerConfig.getQuadrantFromFlags(isUrgent, isImportant);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added ${lines.length} task(s) to ${EisenhowerConfig.getQuadrantName(quadrant)}'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _transferDoFirstToKanban() async {
-    final doFirstCount = _transferService.getDoFirstTasksCount();
+    final doFirstCount = _taskManager.urgentImportantTasks.length;
     
     if (doFirstCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -198,7 +195,7 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
     if (confirmed == true) {
       try {
         await _transferService.transferDoFirstTasksToKanban();
-        setState(() {}); // Refresh the UI
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Successfully transferred $doFirstCount task${doFirstCount > 1 ? 's' : ''} to Kanban'),
@@ -228,11 +225,6 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
       );
     }
 
-    final urgentImportantTasks = _taskManager.getTasksInQuadrant(EisenhowerQuadrant.urgentImportant);
-    final notUrgentImportantTasks = _taskManager.getTasksInQuadrant(EisenhowerQuadrant.notUrgentImportant);
-    final urgentNotImportantTasks = _taskManager.getTasksInQuadrant(EisenhowerQuadrant.urgentNotImportant);
-    final notUrgentNotImportantTasks = _taskManager.getTasksInQuadrant(EisenhowerQuadrant.notUrgentNotImportant);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Eisenhower Matrix'),
@@ -256,12 +248,12 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Do First: ${counts['urgentImportant']}'),
-                      Text('Schedule: ${counts['notUrgentImportant']}'),
-                      Text('Delegate: ${counts['urgentNotImportant']}'),
-                      Text('Eliminate: ${counts['notUrgentNotImportant']}'),
+                      ...EisenhowerQuadrant.values.map((q) {
+                        final name = EisenhowerConfig.getQuadrantName(q);
+                        return Text('$name: ${counts[q]}');
+                      }),
                       const SizedBox(height: 16),
-                      Text('Total: ${counts.values.reduce((a, b) => a + b)}'),
+                      Text('Total: ${_taskManager.getTotalTaskCount()}'),
                     ],
                   ),
                   actions: [
@@ -305,24 +297,24 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
                       Expanded(
                         child: EisenhowerQuadrantWidget(
                           quadrant: EisenhowerQuadrant.urgentImportant,
-                          tasks: urgentImportantTasks,
+                          tasks: _taskManager.urgentImportantTasks,
                           onTaskMoved: _onTaskMoved,
                           onTaskDeleted: _onTaskDeleted,
                           onTaskToggled: _onTaskToggled,
                           onTaskEdited: _onTaskEdited,
-                          onTasksPasted: (text, isUrgent, isImportant) => _onTasksPasted(text, isUrgent, isImportant),
+                          onTasksPasted: _onTasksPasted,
                           onTaskReordered: _onTaskReordered,
                         ),
                       ),
                       Expanded(
                         child: EisenhowerQuadrantWidget(
                           quadrant: EisenhowerQuadrant.urgentNotImportant,
-                          tasks: urgentNotImportantTasks,
+                          tasks: _taskManager.urgentNotImportantTasks,
                           onTaskMoved: _onTaskMoved,
                           onTaskDeleted: _onTaskDeleted,
                           onTaskToggled: _onTaskToggled,
                           onTaskEdited: _onTaskEdited,
-                          onTasksPasted: (text, isUrgent, isImportant) => _onTasksPasted(text, isUrgent, isImportant),
+                          onTasksPasted: _onTasksPasted,
                           onTaskReordered: _onTaskReordered,
                         ),
                       ),
@@ -335,24 +327,24 @@ class _EisenhowerBoardScreenState extends State<EisenhowerBoardScreen> {
                       Expanded(
                         child: EisenhowerQuadrantWidget(
                           quadrant: EisenhowerQuadrant.notUrgentImportant,
-                          tasks: notUrgentImportantTasks,
+                          tasks: _taskManager.notUrgentImportantTasks,
                           onTaskMoved: _onTaskMoved,
                           onTaskDeleted: _onTaskDeleted,
                           onTaskToggled: _onTaskToggled,
                           onTaskEdited: _onTaskEdited,
-                          onTasksPasted: (text, isUrgent, isImportant) => _onTasksPasted(text, isUrgent, isImportant),
+                          onTasksPasted: _onTasksPasted,
                           onTaskReordered: _onTaskReordered,
                         ),
                       ),
                       Expanded(
                         child: EisenhowerQuadrantWidget(
                           quadrant: EisenhowerQuadrant.notUrgentNotImportant,
-                          tasks: notUrgentNotImportantTasks,
+                          tasks: _taskManager.notUrgentNotImportantTasks,
                           onTaskMoved: _onTaskMoved,
                           onTaskDeleted: _onTaskDeleted,
                           onTaskToggled: _onTaskToggled,
                           onTaskEdited: _onTaskEdited,
-                          onTasksPasted: (text, isUrgent, isImportant) => _onTasksPasted(text, isUrgent, isImportant),
+                          onTasksPasted: _onTasksPasted,
                           onTaskReordered: _onTaskReordered,
                         ),
                       ),
