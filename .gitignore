@@ -5,11 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -43,19 +41,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-# Windows build artifacts
-build/windows/
-
-# Release builds (APK, exe, etc.)
-*.apk
-*.exe
-*.dll
-*.so
-
-# Local properties (contains SDK paths)
-local.properties
-
-# Flutter plugin files (regenerated)
-.flutter-plugins
-.flutter-plugins-dependencies

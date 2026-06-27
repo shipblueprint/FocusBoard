@@ -1,101 +1,33 @@
 import 'package:flutter/material.dart';
-import 'screens/kanban_screen.dart';
-import 'screens/eisenhower_board_screen.dart';
-import 'screens/analytics_screen.dart';
+import 'package:get/get.dart';
+import 'package:focusboard/helpers/services/storage/local_storage.dart';
+import 'package:focusboard/helpers/theme/app_theme.dart';
+import 'package:focusboard/helpers/theme/theme_customizer.dart';
+import 'package:focusboard/route/route_method.dart';
+import 'package:focusboard/route/routes.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocalStorage.init();
+  AppStyle.init();
+  await ThemeCustomizer.init();
+  runApp(const FocusBoardApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class FocusBoardApp extends StatelessWidget {
+  const FocusBoardApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'FocusBoard',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        brightness: Brightness.light,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.deepPurple,
-        primaryColor: Colors.deepPurple,
-        scaffoldBackgroundColor: Colors.grey.shade900,
-        cardColor: Colors.grey.shade800,
-        textTheme: TextTheme(
-          bodyMedium: TextStyle(color: Colors.grey.shade100),
-          bodyLarge: TextStyle(color: Colors.grey.shade100),
-          headlineSmall: TextStyle(color: Colors.white),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple.withAlpha(204),
-            foregroundColor: Colors.white,
-          ),
-        ),
-        useMaterial3: true,
-        colorScheme: ColorScheme.dark(
-          primary: Colors.deepPurple,
-          secondary: Colors.pink,
-          surface: Colors.grey.shade800,
-          error: Colors.red.shade400,
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onSurface: Colors.grey.shade100,
-          onError: Colors.white,
-        ),
-      ),
-      themeMode: ThemeMode.dark,
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
-
-  final List<Widget> _screens = [
-    const KanbanScreen(),
-    const EisenhowerBoardScreen(),
-    const AnalyticsScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.view_kanban),
-            label: 'Kanban',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_4x4),
-            label: 'Eisenhower',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics),
-            label: 'Analytics',
-          ),
-        ],
-      ),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeCustomizer.instance.theme,
+      initialRoute: route.appLayout,
+      getPages: getPageRoute(),
+      defaultTransition: Transition.noTransition,
     );
   }
 }
