@@ -9,6 +9,8 @@ import 'package:focusboard/helpers/widgets/my_container.dart';
 import 'package:focusboard/helpers/widgets/my_text.dart';
 import 'package:get/get.dart';
 
+// ponytail: AnimatedContainer + elevation + delay to match Kanban DnD feel
+
 /// Eisenhower Matrix screen.
 ///
 /// Lays out four quadrants in a 2x2 grid. Each quadrant is a [DragTarget]
@@ -230,26 +232,47 @@ class _Quadrant extends StatelessWidget {
         },
         builder: (BuildContext ctx, List<String?> candidate,
             List<dynamic> rejected) {
-          return MyContainer(
+          final bool hovering = candidate.isNotEmpty;
+          final Color quadrantColor =
+              EisenhowerConfig.getQuadrantColor(quadrant);
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.all(10),
-            borderRadiusAll: 12,
-            color: AppTheme.theme.cardColor,
-            border: Border.all(
-              color: candidate.isNotEmpty
-                  ? AppTheme.primaryColor
-                  : AppTheme.theme.dividerColor,
-              width: candidate.isNotEmpty ? 2 : 1,
+            decoration: BoxDecoration(
+              color: hovering
+                  ? quadrantColor.withValues(alpha: 0.08)
+                  : AppTheme.theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hovering ? quadrantColor : AppTheme.theme.dividerColor,
+                width: hovering ? 2 : 1,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                MyText.titleMedium(
-                  EisenhowerConfig.getQuadrantName(quadrant),
-                  fontWeight: 700,
-                ),
-                MyText.bodySmall(
-                  EisenhowerConfig.getQuadrantDescription(quadrant),
-                  color: AppTheme.theme.hintColor,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: quadrantColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: MyText.titleMedium(
+                          EisenhowerConfig.getQuadrantName(quadrant),
+                          fontWeight: 700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      MyText.bodySmall(
+                        EisenhowerConfig.getQuadrantDescription(quadrant),
+                        color: Colors.white70,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -268,8 +291,10 @@ class _Quadrant extends StatelessWidget {
                             final EisenhowerTask t = tasks[i];
                             return LongPressDraggable<String>(
                               data: t.id,
+                              delay: const Duration(milliseconds: 200),
                               feedback: Material(
                                 color: Colors.transparent,
+                                elevation: 6,
                                 child: SizedBox(
                                   width: 240,
                                   child: _QuadrantTaskTile(
@@ -279,7 +304,7 @@ class _Quadrant extends StatelessWidget {
                                 ),
                               ),
                               childWhenDragging: Opacity(
-                                opacity: 0.4,
+                                opacity: 0.35,
                                 child: _QuadrantTaskTile(
                                   task: t,
                                   onDelete: () => onDelete(t.id),
@@ -310,10 +335,14 @@ class _QuadrantTaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final EisenhowerQuadrant q =
+        EisenhowerConfig.getQuadrantFromFlags(task.isUrgent, task.isImportant);
+    final Color taskColor = EisenhowerConfig.getQuadrantColor(q);
     return MyContainer(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       borderRadiusAll: 6,
       color: AppTheme.theme.colorScheme.surface,
+      border: Border(left: BorderSide(color: taskColor, width: 3)),
       child: Row(
         children: <Widget>[
           Expanded(
