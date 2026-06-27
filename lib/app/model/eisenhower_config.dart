@@ -1,3 +1,5 @@
+import 'package:flutter/painting.dart';
+
 /// Quadrant classification for the Eisenhower Matrix.
 enum EisenhowerQuadrant {
   urgentImportant,
@@ -52,6 +54,9 @@ class EisenhowerConfig {
 
   static String getQuadrantChartColor(EisenhowerQuadrant quadrant) =>
       quadrantColorsHex[quadrant] ?? '#9E9E9E';
+
+  static Color getQuadrantColor(EisenhowerQuadrant quadrant) =>
+      Color(quadrantColors[quadrant] ?? 0xFF9E9E9E);
 
   static EisenhowerQuadrant getQuadrantFromFlags(
       bool isUrgent, bool isImportant) {
