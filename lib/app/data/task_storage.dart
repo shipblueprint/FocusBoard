@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:focusboard/app/model/eisenhower_task_model.dart';
+import 'package:focusboard/app/model/habit_model.dart';
 import 'package:focusboard/app/model/task_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,5 +71,28 @@ class TaskStorage {
   static Future<void> saveKanbanWipLimits(Map<String, int> limits) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kanbanWipKey, jsonEncode(limits));
+  }
+
+  static const String _habitKey = 'habits_v1';
+
+  static Future<List<Habit>> loadHabits() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? raw = prefs.getString(_habitKey);
+    if (raw == null || raw.isEmpty) return <Habit>[];
+    try {
+      final List<dynamic> data = jsonDecode(raw) as List<dynamic>;
+      return data
+          .map((dynamic e) => Habit.fromJson(e as Map<String, dynamic>))
+          .toList(growable: true);
+    } catch (_) {
+      return <Habit>[];
+    }
+  }
+
+  static Future<void> saveHabits(List<Habit> habits) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String raw =
+        jsonEncode(habits.map((Habit h) => h.toJson()).toList());
+    await prefs.setString(_habitKey, raw);
   }
 }
