@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:focusboard/view/apps/analytics/analytics_screen.dart';
 import 'package:focusboard/view/apps/eisenhower/eisenhower_screen.dart';
+import 'package:focusboard/view/apps/habit/habit_screen.dart';
 import 'package:focusboard/view/apps/kanban/kanban_screen.dart';
 
-/// Root shell hosting the 3 main tabs.
+/// Root shell hosting the 4 main tabs.
 ///
 /// Uses [IndexedStack] so each tab keeps its state when switching.
 class AppLayout extends StatefulWidget {
@@ -27,6 +28,11 @@ class _AppLayoutState extends State<AppLayout> {
       name: 'Eisenhower',
       icon: LucideIcons.grid_3x3,
       builder: _EisenhowerTab.new,
+    ),
+    _TabSpec(
+      name: 'Habits',
+      icon: LucideIcons.square_check_big,
+      builder: _HabitTab.new,
     ),
     _TabSpec(
       name: 'Analytics',
@@ -86,6 +92,12 @@ class _EisenhowerTab extends StatelessWidget {
   const _EisenhowerTab();
   @override
   Widget build(BuildContext context) => const EisenhowerScreen();
+}
+
+class _HabitTab extends StatelessWidget {
+  const _HabitTab();
+  @override
+  Widget build(BuildContext context) => const HabitScreen();
 }
 
 class _AnalyticsTab extends StatelessWidget {

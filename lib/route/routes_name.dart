@@ -14,4 +14,7 @@ class RoutesName {
 
   /// Analytics dashboard.
   final analytics = '/app/analytics';
+
+  /// Habit tracker.
+  final habit = '/app/habit';
 }
