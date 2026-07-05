@@ -1,15 +1,12 @@
-<div align="center">
-  <img src="assets/images/dummy/logo.png" alt="FocusBoard Logo" width="120" height="120"/>
-  <h1>FocusBoard</h1>
-  <p>
-    <strong>A productivity app combining Kanban boards and the Eisenhower Matrix.</strong>
-  </p>
-  <p>
-    <a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Flutter-3.5+-02569B?logo=flutter&logoColor=white" alt="Flutter 3.5+"/></a>
-    <a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Dart-3.5+-0175C2?logo=dart&logoColor=white" alt="Dart 3.5+"/></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
-  </p>
-</div>
+<h1 align="center">FocusBoard</h1>
+
+<p align="center">
+  <strong>A productivity app combining Kanban boards and the Eisenhower Matrix.</strong>
+  <br/>
+  <a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Flutter-3.5+-02569B?logo=flutter&logoColor=white" alt="Flutter 3.5+"/></a>
+  <a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Dart-3.5+-0175C2?logo=dart&logoColor=white" alt="Dart 3.5+"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
+</p>
 
 ---
 
@@ -84,57 +81,6 @@ flutter build windows --release
 # Output: build/windows/x64/runner/Release/
 ```
 
-## 🏗 Project Architecture
-
-The project follows a **feature-first** structure with **Get** for state management and dependency injection.
-
-```
-app/
-├── lib/
-│   ├── main.dart                     # App entry point
-│   ├── app_constant.dart             # Global constants
-│   ├── images.dart                   # Asset image references
-│   ├── app/
-│   │   ├── controller/               # Feature controllers (GetX)
-│   │   │   ├── analytics_controller.dart
-│   │   │   ├── eisenhower_controller.dart
-│   │   │   ├── habit_controller.dart
-│   │   │   ├── kanban_controller.dart
-│   │   │   └── app_binding.dart
-│   │   ├── model/                    # Data models
-│   │   │   ├── eisenhower_config.dart
-│   │   │   ├── eisenhower_task_model.dart
-│   │   │   ├── habit_model.dart
-│   │   │   ├── task_model.dart
-│   │   │   └── task_validator.dart
-│   │   └── data/                     # Data / storage layer
-│   │       └── task_storage.dart
-│   ├── controller/                   # Global controllers
-│   │   └── my_controller.dart
-│   ├── helpers/
-│   │   ├── extensions/               # Dart extension methods
-│   │   ├── services/                 # Auth, storage, localisation
-│   │   ├── theme/                    # Light/dark theme definitions
-│   │   ├── utils/                    # Utility classes & mixins
-│   │   └── widgets/                  # Reusable widget library
-│   ├── model/                        # Additional models
-│   ├── route/                        # Named route definitions
-│   ├── view/
-│   │   ├── app_layout/               # Root shell with bottom navigation
-│   │   └── apps/
-│   │       ├── analytics/            # Analytics screen
-│   │       ├── eisenhower/           # Eisenhower Matrix screen
-│   │       ├── habit/                # Habit tracker screen
-│   │       └── kanban/               # Kanban board screen
-│   └── widgets/                      # Shared widgets
-├── assets/
-│   ├── data/                         # JSON data files
-│   ├── images/                       # PNG / JPG assets
-│   └── lang/                         # Localisation files
-├── android/
-├── ios/
-└── test/
-```
 
 ## 🧰 Tech Stack
 
