@@ -1,16 +1,151 @@
-# henox
+<div align="center">
+  <img src="assets/images/dummy/logo.png" alt="FocusBoard Logo" width="120" height="120"/>
+  <h1>FocusBoard</h1>
+  <p>
+    <strong>A productivity app combining Kanban boards and the Eisenhower Matrix.</strong>
+  </p>
+  <p>
+    <a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Flutter-3.5+-02569B?logo=flutter&logoColor=white" alt="Flutter 3.5+"/></a>
+    <a href="https://dart.dev" target="_blank"><img src="https://img.shields.io/badge/Dart-3.5+-0175C2?logo=dart&logoColor=white" alt="Dart 3.5+"/></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
+  </p>
+</div>
 
-A new Flutter project.
+---
 
-## Getting Started
+## ✨ Features
 
-This project is a starting point for a Flutter application.
+| Feature | Description |
+|---|---|
+| **📋 Kanban Board** | Drag-and-drop task management with swimlanes (To Do, In Progress, Done). |
+| **📊 Eisenhower Matrix** | Prioritise tasks by urgency and importance (Eisenhower method). |
+| **📈 Analytics** | Visual insights into your productivity trends and task completion. |
+| **✅ Habit Tracker** | Track daily habits and build consistent routines. |
+| **🌙 Dark / Light Theme** | Full theme support — light, dark, and customisable accent colours. |
+| **🌍 Localisation** | Built with `intl` — ready for multiple languages. |
 
-A few resources to get you started if this is your first Flutter project:
+## 📸 Screenshots
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+| Kanban | Eisenhower | Analytics | Habits |
+|---|---|---|---|
+| *(screenshot)* | *(screenshot)* | *(screenshot)* | *(screenshot)* |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+> *Replace the placeholder rows above with actual screenshots once available.*
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Flutter](https://flutter.dev/docs/get-started/install) 3.5+
+- [Dart](https://dart.dev/get-dart) 3.5+
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/shipblueprint/FocusBoard.git
+cd FocusBoard/app
+
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
+```
+
+### Build
+
+```bash
+# Debug APK
+flutter build apk --debug
+
+# Release APK
+flutter build apk --release
+
+# iOS (macOS only)
+flutter build ios --release
+```
+
+## 🏗 Project Architecture
+
+The project follows a **feature-first** structure with **Get** for state management and dependency injection.
+
+```
+app/
+├── lib/
+│   ├── main.dart                     # App entry point
+│   ├── app_constant.dart             # Global constants
+│   ├── images.dart                   # Asset image references
+│   ├── app/
+│   │   ├── controller/               # Feature controllers (GetX)
+│   │   │   ├── analytics_controller.dart
+│   │   │   ├── eisenhower_controller.dart
+│   │   │   ├── habit_controller.dart
+│   │   │   ├── kanban_controller.dart
+│   │   │   └── app_binding.dart
+│   │   ├── model/                    # Data models
+│   │   │   ├── eisenhower_config.dart
+│   │   │   ├── eisenhower_task_model.dart
+│   │   │   ├── habit_model.dart
+│   │   │   ├── task_model.dart
+│   │   │   └── task_validator.dart
+│   │   └── data/                     # Data / storage layer
+│   │       └── task_storage.dart
+│   ├── controller/                   # Global controllers
+│   │   └── my_controller.dart
+│   ├── helpers/
+│   │   ├── extensions/               # Dart extension methods
+│   │   ├── services/                 # Auth, storage, localisation
+│   │   ├── theme/                    # Light/dark theme definitions
+│   │   ├── utils/                    # Utility classes & mixins
+│   │   └── widgets/                  # Reusable widget library
+│   ├── model/                        # Additional models
+│   ├── route/                        # Named route definitions
+│   ├── view/
+│   │   ├── app_layout/               # Root shell with bottom navigation
+│   │   └── apps/
+│   │       ├── analytics/            # Analytics screen
+│   │       ├── eisenhower/           # Eisenhower Matrix screen
+│   │       ├── habit/                # Habit tracker screen
+│   │       └── kanban/               # Kanban board screen
+│   └── widgets/                      # Shared widgets
+├── assets/
+│   ├── data/                         # JSON data files
+│   ├── images/                       # PNG / JPG assets
+│   └── lang/                         # Localisation files
+├── android/
+├── ios/
+└── test/
+```
+
+## 🧰 Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| [Flutter](https://flutter.dev) | Cross-platform UI framework |
+| [Get](https://pub.dev/packages/get) | State management, routing, DI |
+| [SharedPreferences](https://pub.dev/packages/shared_preferences) | Local persistence |
+| [Google Fonts](https://pub.dev/packages/google_fonts) | Typography |
+| [flutter_lucide](https://pub.dev/packages/flutter_lucide) | Premium icon set |
+| [intl](https://pub.dev/packages/intl) | Internationalisation |
+| [url_strategy](https://pub.dev/packages/url_strategy) | Web URL handling |
+
+## 🤝 Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/shipblueprint">shipblueprint</a></sub>
+</div>
