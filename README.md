@@ -23,11 +23,11 @@
 
 ## 📸 Screenshots
 
-| Kanban | Eisenhower | Analytics | Habits |
-|---|---|---|---|
-| *(screenshot)* | *(screenshot)* | *(screenshot)* | *(screenshot)* |
-
-> *Replace the placeholder rows above with actual screenshots once available.*
+| Kanban Board | Eisenhower Matrix |
+|---|---|
+| ![Kanban](assets/screenshots/kanban.jpg) | ![Eisenhower Matrix](assets/screenshots/eisenhower.jpg) |
+| **Analytics Dashboard** | **Habit Tracker** |
+| ![Analytics](assets/screenshots/analytics.jpg) | ![Habits](assets/screenshots/habits.jpg) |
 
 ## 🚀 Getting Started
 
