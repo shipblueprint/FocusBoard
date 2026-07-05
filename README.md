@@ -56,14 +56,32 @@ flutter run
 ### Build
 
 ```bash
-# Debug APK
+# Android
 flutter build apk --debug
-
-# Release APK
 flutter build apk --release
+flutter build appbundle --release   # Play Store
 
 # iOS (macOS only)
 flutter build ios --release
+
+# Windows
+flutter build windows --release
+```
+
+## 📦 Download & Install
+
+### Windows
+
+Pre-built Windows releases are available on the [Releases page](https://github.com/shipblueprint/FocusBoard/releases).
+
+Download the latest `FocusBoard-windows-x64.zip`, extract it anywhere, and run `FocusBoard.exe`.
+
+> **No installation required** — just unzip and run. The app is fully self-contained.
+
+**To build from source:**
+```bash
+flutter build windows --release
+# Output: build/windows/x64/runner/Release/
 ```
 
 ## 🏗 Project Architecture
@@ -129,6 +147,15 @@ app/
 | [flutter_lucide](https://pub.dev/packages/flutter_lucide) | Premium icon set |
 | [intl](https://pub.dev/packages/intl) | Internationalisation |
 | [url_strategy](https://pub.dev/packages/url_strategy) | Web URL handling |
+
+## Platforms
+
+| Platform | Status |
+|---|---|
+| 📱 Android | ✅ Supported |
+| 🍎 iOS | ✅ Supported (macOS build required) |
+| 🪟 Windows | ✅ Supported (x86‑64) |
+| 🌐 Web | ⏳ Experimental |
 
 ## 🤝 Contributing
 
