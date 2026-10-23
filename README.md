@@ -101,6 +101,27 @@ flutter build linux --release
 # Output: build/linux/x64/release/bundle/
 ```
 
+**Installing it on the build host (per-user, no root).** Every release install goes through
+one script — it builds nothing itself, so run `flutter build linux --release` (or the
+`--debug` variant) first:
+
+```bash
+scripts/install-linux.sh            # release bundle -> ~/.local/share/focusboard
+scripts/install-linux.sh --debug    # install the debug bundle instead
+scripts/install-linux.sh --launch   # ...and start it afterwards
+```
+
+It stops any running instance, `rsync --delete`s the bundle into
+`~/.local/share/focusboard/`, (re)writes
+`~/.local/share/applications/io.github.shipblueprint.focusboard.desktop` — whose `Exec=` line
+is the authoritative path — regenerates the hicolor icon sizes from `focusboard_icon.png`,
+validates the desktop file, refreshes the mime/icon caches, and prints the installed
+`libapp.so` timestamp so you can confirm the new code landed.
+
+> It refuses to install a bundle whose `libapp.so` is older than `lib/`. Dart-only edits do
+> not relink the runner, so `FocusBoard` itself keeps an old timestamp — always check
+> `lib/libapp.so`, never the executable.
+
 A Linux build needs a C/C++ toolchain plus the GTK 3 development headers, and the
 desktop target enabled once per machine:
 
