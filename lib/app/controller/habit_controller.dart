@@ -16,32 +16,28 @@ class HabitController extends GetxController {
     final List<Habit> loaded = await TaskStorage.loadHabits();
     if (loaded.isNotEmpty) {
       habits.assignAll(loaded);
-    } else {
+    } else if (!await TaskStorage.hasEverSaved()) {
       _seed();
     }
   }
 
   Future<void> _seed() async {
     final DateTime now = DateTime.now();
-    final String today = _today(now);
     habits.addAll(<Habit>[
       Habit(
         id: TaskValidator.generateUuid(),
         name: 'Morning walk',
         createdAt: now.subtract(const Duration(days: 7)),
-        completedDates: <String>{today, _today(now.subtract(const Duration(days: 1)))},
       ),
       Habit(
         id: TaskValidator.generateUuid(),
         name: 'Read 30 mins',
         createdAt: now.subtract(const Duration(days: 3)),
-        completedDates: <String>{today},
       ),
       Habit(
         id: TaskValidator.generateUuid(),
         name: 'Drink 8 glasses of water',
         createdAt: now,
-        completedDates: <String>{},
       ),
     ]);
     await _persist();
@@ -71,10 +67,5 @@ class HabitController extends GetxController {
   Future<void> deleteHabit(String habitId) async {
     habits.removeWhere((Habit h) => h.id == habitId);
     await _persist();
-  }
-
-  static String _today([DateTime? date]) {
-    final DateTime d = date ?? DateTime.now();
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 }

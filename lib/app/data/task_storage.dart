@@ -75,6 +75,11 @@ class TaskStorage {
 
   static const String _habitKey = 'habits_v1';
 
+  static Future<bool> hasEverSaved() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(_habitKey);
+  }
+
   static Future<List<Habit>> loadHabits() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? raw = prefs.getString(_habitKey);
