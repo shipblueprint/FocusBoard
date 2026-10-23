@@ -28,6 +28,17 @@ class EisenhowerScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Eisenhower Matrix'),
         actions: <Widget>[
+          Obx(
+            () => IconButton(
+              tooltip: 'Move Do First to Kanban',
+              icon: const Icon(Icons.swap_horiz),
+              onPressed: controller
+                      .byQuadrant(EisenhowerQuadrant.urgentImportant)
+                      .isEmpty
+                  ? null
+                  : () => controller.moveDoFirstToKanban(),
+            ),
+          ),
           IconButton(
             tooltip: 'Add task',
             icon: const Icon(Icons.add),
@@ -235,6 +246,8 @@ class _Quadrant extends StatelessWidget {
           final bool hovering = candidate.isNotEmpty;
           final Color quadrantColor =
               EisenhowerConfig.getQuadrantColor(quadrant);
+          final Color quadrantInk =
+              EisenhowerConfig.getQuadrantInkColor(quadrant);
           return AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.all(10),
@@ -264,12 +277,12 @@ class _Quadrant extends StatelessWidget {
                         child: MyText.titleMedium(
                           EisenhowerConfig.getQuadrantName(quadrant),
                           fontWeight: 700,
-                          color: Colors.white,
+                          color: quadrantInk,
                         ),
                       ),
                       MyText.bodySmall(
                         EisenhowerConfig.getQuadrantDescription(quadrant),
-                        color: Colors.white70,
+                        color: quadrantInk,
                       ),
                     ],
                   ),

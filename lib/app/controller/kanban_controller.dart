@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:focusboard/app/data/task_storage.dart';
 import 'package:focusboard/app/model/task_model.dart';
 import 'package:focusboard/app/model/task_validator.dart';
@@ -54,6 +55,29 @@ class KanbanController extends GetxController {
     );
     tasks.add(task);
     await _persist();
+  }
+
+  /// Import tasks that already exist elsewhere (the Eisenhower matrix),
+  /// preserving their ids and landing them in [KanbanColumn.toDo].
+  ///
+  /// An id already on the board is skipped: the board never holds the same
+  /// task twice.
+  Future<void> importTasks(List<Task> incoming) async {
+    final List<Task> added = <Task>[];
+    for (final Task task in incoming) {
+      if (tasks.any((Task t) => t.id == task.id)) continue;
+      added.add(Task(
+        id: task.id,
+        title: task.title,
+        isCompleted: task.isCompleted,
+        isHighPriority: task.isHighPriority,
+        column: KanbanColumn.toDo,
+      ));
+    }
+    if (added.isEmpty) return;
+    tasks.addAll(added);
+    await _persist();
+    debugPrint('Kanban: imported ${added.length} task(s) into To Do');
   }
 
   Future<void> moveTask(String id, KanbanColumn target) async {

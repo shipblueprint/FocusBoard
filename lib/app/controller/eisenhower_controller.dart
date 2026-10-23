@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:focusboard/app/controller/kanban_controller.dart';
 import 'package:focusboard/app/data/task_storage.dart';
 import 'package:focusboard/app/model/eisenhower_config.dart';
 import 'package:focusboard/app/model/eisenhower_task_model.dart';
@@ -7,6 +9,11 @@ import 'package:get/get.dart';
 
 /// Reactive controller for the Eisenhower Matrix.
 class EisenhowerController extends GetxController {
+  EisenhowerController({KanbanController? kanban})
+      : _kanban = kanban ?? Get.find<KanbanController>();
+
+  final KanbanController _kanban;
+
   final RxList<EisenhowerTask> tasks = <EisenhowerTask>[].obs;
 
   @override
@@ -91,5 +98,23 @@ class EisenhowerController extends GetxController {
       isImportant: isImportant,
     ));
     await _persist();
+  }
+
+  /// Move every Do First task onto the Kanban board's To Do column.
+  ///
+  /// The board is written before the quadrant is emptied, so a task can never
+  /// end up in neither system. Returns how many tasks left the matrix.
+  Future<int> moveDoFirstToKanban() async {
+    final List<EisenhowerTask> doFirst =
+        byQuadrant(EisenhowerQuadrant.urgentImportant);
+    if (doFirst.isEmpty) return 0;
+
+    await _kanban.importTasks(doFirst);
+    tasks.removeWhere(
+        (EisenhowerTask t) => t.quadrant == EisenhowerQuadrant.urgentImportant);
+    await _persist();
+    debugPrint(
+        'Eisenhower: moved ${doFirst.length} Do First task(s) to Kanban To Do');
+    return doFirst.length;
   }
 }
