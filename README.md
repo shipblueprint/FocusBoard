@@ -99,8 +99,28 @@ tar xzf FocusBoard-linux-x64.tar.gz
 ```bash
 flutter build linux --release
 # Output: build/linux/x64/release/bundle/
-# Requires: clang, cmake, ninja-build, gtk3-devel
 ```
+
+A Linux build needs a C/C++ toolchain plus the GTK 3 development headers, and the
+desktop target enabled once per machine:
+
+```bash
+# Fedora / RPM-based
+sudo dnf5 install -y clang cmake ninja-build gtk3-devel
+
+# Ubuntu / Debian-based
+sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev
+
+flutter config --enable-linux-desktop
+flutter doctor   # "Linux toolchain" must be green
+```
+
+> **Gotchas**
+> * The package is `ninja-build`, not `ninja`.
+> * `glu-devel` is not available on recent Fedora (Mesa GLU was retired) and is not needed.
+> * Flutter is not packaged for Fedora — install it from the [official tarball](https://docs.flutter.dev/get-started/install/linux). It bundles Dart, so do not install Dart separately.
+> * `webkit2gtk` is only required if a webview plugin is added; this app has no Linux-native plugins.
+> * On the current dev machine `gtk3-devel` is not installed system-wide, so builds run through `/mnt/data/gtkdev/flutter-linux-build.sh`, which points `PKG_CONFIG_PATH` at an unprivileged header prefix. Both become unnecessary once the package above is installed.
 
 
 ## 🧰 Tech Stack
@@ -124,6 +144,48 @@ flutter build linux --release
 | 🪟 Windows | ✅ Supported (x86‑64) |
 | 🐧 Linux | ✅ Supported (x86‑64) |
 | 🌐 Web | ⏳ Experimental |
+
+## 📦 Releasing
+
+1. **Bump the version** in `pubspec.yaml`. The `version:` field is what the running app
+   reports and it is independent of the git tag — keep the two in step
+   (`version: 1.0.1+2` pairs with tag `v1.0.1`).
+2. **Build each platform from the commit you intend to publish**, so the tag and the
+   binaries describe the same code.
+3. **Package** one archive per platform, named `FocusBoard-<platform>-<arch>.zip|tar.gz`.
+   The Linux `bundle/` directory *is* the release:
+
+   ```bash
+   cd build/linux/x64/release
+   # re-root to FocusBoard/ so extraction does not create a folder named "bundle"
+   tar czf ../../../FocusBoard-linux-x64.tar.gz --transform 's,^bundle,FocusBoard,' bundle
+   ```
+
+4. **Publish**, targeting the exact commit the artifact was built from:
+
+   ```bash
+   gh release create v1.0.1 --target "$(git rev-parse HEAD)" \
+     --title "v1.0.1 — Linux (x86-64)" --notes-file notes.md \
+     FocusBoard-linux-x64.tar.gz
+   ```
+
+   `--target` needs a **full** commit SHA; an abbreviated one fails with
+   `Release.target_commitish is invalid`. To add an asset to an existing release, use
+   `gh release upload <tag> <file>`.
+5. **Confirm the asset serves** — `curl -sIL <download-url> | head -1` should return 200.
+
+> **Conventions**
+> * Each platform currently lives on its own release (`v1.0.0` = Windows, `v1.0.1` = Linux)
+>   so every tag matches the source its binary was built from. GitHub marks the newest
+>   release *Latest*, so link the other platforms from each release's notes.
+> * `focusboard_icon.png` in the repo root is the single source of truth for the icon.
+>   Windows consumes a derived `windows/runner/resources/app_icon.ico` — regenerate it
+>   when the icon changes. Linux installs the PNG itself into `data/icons/` and loads it
+>   at runtime, so it needs no conversion step.
+> * `android/`, `ios/` and `macos/` still carry the template identifier
+>   `com.example.henox`. Changing `applicationId` / `PRODUCT_BUNDLE_IDENTIFIER` changes
+>   install identity and stops existing users from receiving updates — treat it as a
+>   planned migration, not a rename.
 
 ## 🤝 Contributing
 
