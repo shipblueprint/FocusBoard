@@ -63,6 +63,9 @@ flutter build ios --release
 
 # Windows
 flutter build windows --release
+
+# Linux
+flutter build linux --release
 ```
 
 ## 📦 Download & Install
@@ -79,6 +82,24 @@ Download the latest `FocusBoard-windows-x64.zip`, extract it anywhere, and run `
 ```bash
 flutter build windows --release
 # Output: build/windows/x64/runner/Release/
+```
+
+### Linux
+
+Download the latest `FocusBoard-linux-x64.tar.gz` from the [Releases page](https://github.com/shipblueprint/FocusBoard/releases), extract it, and run the `FocusBoard` binary inside:
+
+```bash
+tar xzf FocusBoard-linux-x64.tar.gz
+./FocusBoard/FocusBoard
+```
+
+> **No installation required** — the bundle is self-contained, but it does use the system GTK 3 libraries (`libgtk-3.so.0`), which are already present on any desktop Linux distribution. Requires glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+, Fedora 36+).
+
+**To build from source:**
+```bash
+flutter build linux --release
+# Output: build/linux/x64/release/bundle/
+# Requires: clang, cmake, ninja-build, gtk3-devel
 ```
 
 
@@ -101,6 +122,7 @@ flutter build windows --release
 | 📱 Android | ✅ Supported |
 | 🍎 iOS | ✅ Supported (macOS build required) |
 | 🪟 Windows | ✅ Supported (x86‑64) |
+| 🐧 Linux | ✅ Supported (x86‑64) |
 | 🌐 Web | ⏳ Experimental |
 
 ## 🤝 Contributing
