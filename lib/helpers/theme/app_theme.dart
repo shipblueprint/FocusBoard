@@ -32,7 +32,7 @@ class AppTheme {
   static ThemeData theme = AppTheme.getThemeFromThemeMode();
   static TextDirection textDirection = TextDirection.ltr;
 
-  static Color primaryColor = Color(0xff275AC5);
+  static Color primaryColor = AppColors.brand;
 
   static ThemeData getThemeFromThemeMode() {
     return ThemeCustomizer.instance.theme == ThemeMode.light
@@ -57,17 +57,43 @@ class AppTheme {
     /// AppBar Theme
     appBarTheme: AppBarTheme(
         backgroundColor: Color(0xffF5F5F5),
-        iconTheme: IconThemeData(color: Color(0xff495057)),
-        actionsIconTheme: IconThemeData(color: Color(0xff495057))),
+        iconTheme: IconThemeData(color: AppColors.espresso),
+        actionsIconTheme: IconThemeData(color: AppColors.espresso)),
 
     /// Card Theme
     cardTheme: CardThemeData(color: Color(0xffffffff)),
     cardColor: Color(0xffffffff),
 
+    /// Bottom navigation menu (shared by all tabs)
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.ivoryPorcelain,
+      indicatorColor: AppColors.harvestGold,
+      iconTheme: WidgetStateProperty.resolveWith((Set<WidgetState> states) =>
+          states.contains(WidgetState.selected)
+              ? const IconThemeData(color: AppColors.espresso)
+              : const IconThemeData(color: AppColors.navInkUnselectedLight)),
+      labelTextStyle:
+          WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+        final bool selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          color: selected
+              ? AppColors.espresso
+              : AppColors.navInkUnselectedLight,
+        );
+      }),
+    ),
+
     /// Colorscheme
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Color(0xff275AC5),
+      seedColor: AppColors.brand,
       brightness: Brightness.light,
+      // Habits accent. rustClay is the only brand hue that holds up as a fill on
+      // both cards (5.6:1 light / 3.1:1 dark), and on this surface it is 5.1:1 as
+      // text too, so one token covers fill and foreground.
+      secondary: AppColors.rustClay,
+      onSecondary: Colors.white,
     ),
 
     snackBarTheme: SnackBarThemeData(actionTextColor: Colors.white),
@@ -147,7 +173,7 @@ class AppTheme {
     scaffoldBackgroundColor: Color(0xff262729),
     canvasColor: Colors.transparent,
 
-    primaryColor: Color(0xff275AC5),
+    primaryColor: AppColors.brand,
 
     /// AppBar Theme
     appBarTheme: AppBarTheme(backgroundColor: Color(0xff262729)),
@@ -156,12 +182,38 @@ class AppTheme {
     cardTheme: CardThemeData(color: Color(0xff1b1b1c)),
     cardColor: Color(0xff1b1b1c),
 
+    /// Bottom navigation menu (shared by all tabs)
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Color(0xff1b1b1c),
+      indicatorColor: AppColors.harvestGold,
+      iconTheme: WidgetStateProperty.resolveWith((Set<WidgetState> states) =>
+          states.contains(WidgetState.selected)
+              ? const IconThemeData(color: AppColors.espresso)
+              : const IconThemeData(color: AppColors.navInkUnselectedDark)),
+      labelTextStyle:
+          WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+        final bool selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          color: selected
+              ? AppColors.espresso
+              : AppColors.navInkUnselectedDark,
+        );
+      }),
+    ),
+
     /// Colorscheme
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Color(0xff275AC5),
+      seedColor: AppColors.brand,
       surface: Color(0xff262729),
       onSurface: Color(0xFFD7D7D7),
       brightness: Brightness.dark,
+      // rustClay drops to 2.7:1 on this surface, so the habits accent becomes the
+      // gold, which is 5.3:1 here. Espresso ink on gold is 4.8:1; white would be
+      // 2.9:1 and disappear.
+      secondary: AppColors.harvestGold,
+      onSecondary: AppColors.espresso,
     ),
 
     /// Input (Text-Field) Theme
@@ -279,6 +331,28 @@ class AppStyle {
 }
 
 class AppColors {
+  /// -------------------------- Brand palette  --------------------------------------- ///
+  ///
+  /// Roles are assigned by measured WCAG contrast, not preference: harvestGold
+  /// is 2.6:1 on the light background, so it is a fill only and must never be
+  /// used as a foreground.
+  static const Color harvestGold = Color(0xFFBB9457);
+  static const Color espresso = Color(0xFF432818);
+  static const Color rustClay = Color(0xFF99582A);
+  static const Color deepMaroon = Color(0xFF6F1D1B);
+  static const Color ivoryPorcelain = Color(0xFFEFE3D2);
+
+  /// Primary fill — buttons, checkboxes, switches, sliders, FAB. Light content
+  /// stays at 11.3:1 on it, so one value serves both brightnesses.
+  static const Color brand = deepMaroon;
+
+  /// Espresso at 72% over the ivory nav surface: 4.9:1, the floor for the
+  /// 12px unselected labels.
+  static const Color navInkUnselectedLight = Color(0xB8432818);
+
+  /// Ivory at 60% over the dark nav surface: 5.7:1.
+  static const Color navInkUnselectedDark = Color(0x99EFE3D2);
+
   static final Color star = Color(0xffFFC233);
   static Color ratingStarColor = Color(0xFFF9A825);
   static Color success = Color(0xff1abc9c);

@@ -233,8 +233,7 @@ class _QuadrantBreakdown extends StatelessWidget {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: Color(EisenhowerConfig.quadrantColors[q] ??
-                          0xFF9E9E9E),
+                      color: EisenhowerConfig.getQuadrantColor(q),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),

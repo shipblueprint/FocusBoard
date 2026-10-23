@@ -1,4 +1,5 @@
 import 'package:flutter/painting.dart';
+import 'package:focusboard/helpers/theme/app_theme.dart';
 
 /// Quadrant classification for the Eisenhower Matrix.
 enum EisenhowerQuadrant {
@@ -29,21 +30,26 @@ class EisenhowerConfig {
     EisenhowerQuadrant.notUrgentNotImportant: 'Not Urgent & Not Important',
   };
 
-  static const Map<EisenhowerQuadrant, String> quadrantColorsHex =
-      <EisenhowerQuadrant, String>{
-    EisenhowerQuadrant.urgentImportant: '#FF6B6B',
-    EisenhowerQuadrant.notUrgentImportant: '#4ECDC4',
-    EisenhowerQuadrant.urgentNotImportant: '#FFE66D',
-    EisenhowerQuadrant.notUrgentNotImportant: '#95A5A6',
+  /// Quadrant accents, drawn from the four-step brand ramp in `AppColors`.
+  ///
+  /// Luminance carries the meaning — darkest is the most important quadrant —
+  /// so the four headers stay distinguishable without leaving the palette.
+  static const Map<EisenhowerQuadrant, Color> quadrantColors =
+      <EisenhowerQuadrant, Color>{
+    EisenhowerQuadrant.urgentImportant: AppColors.espresso,
+    EisenhowerQuadrant.notUrgentImportant: AppColors.deepMaroon,
+    EisenhowerQuadrant.urgentNotImportant: AppColors.rustClay,
+    EisenhowerQuadrant.notUrgentNotImportant: AppColors.harvestGold,
   };
 
-  /// Flat design quadrant colors that pair with the FocusBoard design system.
-  static const Map<EisenhowerQuadrant, int> quadrantColors =
-      <EisenhowerQuadrant, int>{
-    EisenhowerQuadrant.urgentImportant: 0xFFE53935,
-    EisenhowerQuadrant.notUrgentImportant: 0xFF00897B,
-    EisenhowerQuadrant.urgentNotImportant: 0xFFFB8C00,
-    EisenhowerQuadrant.notUrgentNotImportant: 0xFF757575,
+  /// Text drawn on top of [quadrantColors]. harvestGold is only 2.8:1 against
+  /// white, so it takes espresso ink instead of the white the dark steps use.
+  static const Map<EisenhowerQuadrant, Color> quadrantInkColors =
+      <EisenhowerQuadrant, Color>{
+    EisenhowerQuadrant.urgentImportant: Color(0xFFFFFFFF),
+    EisenhowerQuadrant.notUrgentImportant: Color(0xFFFFFFFF),
+    EisenhowerQuadrant.urgentNotImportant: Color(0xFFFFFFFF),
+    EisenhowerQuadrant.notUrgentNotImportant: AppColors.espresso,
   };
 
   static String getQuadrantName(EisenhowerQuadrant quadrant) =>
@@ -52,11 +58,11 @@ class EisenhowerConfig {
   static String getQuadrantDescription(EisenhowerQuadrant quadrant) =>
       quadrantDescriptions[quadrant] ?? 'Unknown';
 
-  static String getQuadrantChartColor(EisenhowerQuadrant quadrant) =>
-      quadrantColorsHex[quadrant] ?? '#9E9E9E';
-
   static Color getQuadrantColor(EisenhowerQuadrant quadrant) =>
-      Color(quadrantColors[quadrant] ?? 0xFF9E9E9E);
+      quadrantColors[quadrant] ?? AppColors.rustClay;
+
+  static Color getQuadrantInkColor(EisenhowerQuadrant quadrant) =>
+      quadrantInkColors[quadrant] ?? const Color(0xFFFFFFFF);
 
   static EisenhowerQuadrant getQuadrantFromFlags(
       bool isUrgent, bool isImportant) {

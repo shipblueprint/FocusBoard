@@ -21,11 +21,20 @@ class KanbanScreen extends StatelessWidget {
   ];
 
   // Column colors — distinct enough to scan at a glance, calm enough for
-  // sustained focus work.
+  // sustained focus work. Drawn from the four-step brand ramp in `AppColors`:
+  // quiet gold for pending, clay for in flight, maroon for committed.
   static const Map<KanbanColumn, Color> _columnColors = <KanbanColumn, Color>{
-    KanbanColumn.toDo: Color(0xFF275AC5),
-    KanbanColumn.inProgress: Color(0xFFFEC20D),
-    KanbanColumn.done: Color(0xFF17A497),
+    KanbanColumn.toDo: AppColors.harvestGold,
+    KanbanColumn.inProgress: AppColors.rustClay,
+    KanbanColumn.done: AppColors.deepMaroon,
+  };
+
+  /// Text drawn on the header band. harvestGold is only 2.8:1 against white, so
+  /// To Do takes espresso ink while the darker columns keep white.
+  static const Map<KanbanColumn, Color> _columnInk = <KanbanColumn, Color>{
+    KanbanColumn.toDo: AppColors.espresso,
+    KanbanColumn.inProgress: Color(0xFFFFFFFF),
+    KanbanColumn.done: Color(0xFFFFFFFF),
   };
 
   @override
@@ -60,6 +69,7 @@ class KanbanScreen extends StatelessWidget {
                       child: _ColumnView(
                         column: col,
                         color: _columnColors[col]!,
+                        ink: _columnInk[col]!,
                         tasks: controller.byColumn(col),
                         wipLimit: controller.wipLimits[col] ?? 999,
                         onAdd: () => _openAddTaskSheet(context, controller),
@@ -197,6 +207,7 @@ class _ColumnView extends StatelessWidget {
   const _ColumnView({
     required this.column,
     required this.color,
+    required this.ink,
     required this.tasks,
     required this.wipLimit,
     required this.onAdd,
@@ -209,6 +220,7 @@ class _ColumnView extends StatelessWidget {
 
   final KanbanColumn column;
   final Color color;
+  final Color ink;
   final List<Task> tasks;
   final int wipLimit;
   final VoidCallback onAdd;
@@ -246,7 +258,7 @@ class _ColumnView extends StatelessWidget {
                 Expanded(
                   child: MyText.bodyMedium(
                     column.label,
-                    color: Colors.white,
+                    color: ink,
                     fontWeight: 700,
                   ),
                 ),
@@ -254,7 +266,7 @@ class _ColumnView extends StatelessWidget {
                   _isWipReached
                       ? '${tasks.length}/$wipLimit'
                       : tasks.length.toString(),
-                  color: Colors.white,
+                  color: ink,
                   fontWeight: 600,
                 ),
               ],
@@ -472,7 +484,7 @@ class _TaskCard extends StatelessWidget {
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
                       color: task.isCompleted
-                          ? const Color(0xFF17A497)
+                          ? KanbanScreen._columnColors[KanbanColumn.done]!
                           : AppTheme.theme.hintColor,
                     ),
                     onPressed: onToggleComplete,
