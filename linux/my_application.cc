@@ -1,5 +1,8 @@
 #include "my_application.h"
 
+#include <limits.h>
+#include <unistd.h>
+
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
@@ -13,6 +16,29 @@ struct _MyApplication {
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+// Loaded relative to the executable because a portable bundle is not installed
+// into any icon theme, so a themed icon name would not resolve.
+static void
+set_application_icon(GtkWindow* window)
+{
+  char exe_path[PATH_MAX];
+  ssize_t length = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+  if (length > 0) {
+    exe_path[length] = '\0';
+    g_autofree char* dir = g_path_get_dirname(exe_path);
+    g_autofree char* icon_path =
+        g_build_filename(dir, "data", "icons", "focusboard.png", NULL);
+    g_autoptr(GdkPixbuf) pixbuf =
+        gdk_pixbuf_new_from_file_at_size(icon_path, 256, 256, NULL);
+    if (pixbuf != NULL) {
+      gtk_window_set_icon(window, pixbuf);
+      return;
+    }
+  }
+
+  gtk_window_set_icon_name(window, APPLICATION_ID);
+}
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
@@ -40,14 +66,15 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "henox");
+    gtk_header_bar_set_title(header_bar, "FocusBoard");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "henox");
+    gtk_window_set_title(window, "FocusBoard");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+  set_application_icon(window);
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
