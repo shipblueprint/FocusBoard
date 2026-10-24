@@ -129,9 +129,18 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          MyText.bodySmall(label, color: AppTheme.theme.hintColor),
+          MyText.bodySmall(
+            label,
+            color: AppTheme.theme.hintColor,
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 6),
-          MyText.headlineSmall(value, fontWeight: 700),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: MyText.headlineSmall(value, fontWeight: 700),
+          ),
         ],
       ),
     );

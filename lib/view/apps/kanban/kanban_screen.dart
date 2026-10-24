@@ -59,33 +59,66 @@ class KanbanScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Obx(
-          () => Row(
-            children: _columns
-                .map(
-                  (KanbanColumn col) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: _ColumnView(
-                        column: col,
-                        color: _columnColors[col]!,
-                        ink: _columnInk[col]!,
-                        tasks: controller.byColumn(col),
-                        wipLimit: controller.wipLimits[col] ?? 999,
-                        onAdd: () => _openAddTaskSheet(context, controller),
-                        onMove: (String taskId, KanbanColumn target) =>
-                            controller.moveTask(taskId, target),
-                        onDelete: controller.deleteTask,
-                        onTogglePriority: controller.togglePriority,
-                        onToggleComplete: controller.toggleCompleted,
-                        onWipLimitChange: (int v) =>
-                            controller.setWipLimit(col, v),
-                      ),
-                    ),
-                  ),
-                )
-                .toList(growable: false),
-          ),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            // Below 600dp three side-by-side columns collapse the task
+            // cards (3 x 48px icon buttons leave no room for the title).
+            // Page the columns horizontally instead.
+            final bool narrow = constraints.maxWidth < 600;
+            return Obx(
+              () {
+                Widget columnView(KanbanColumn col) => _ColumnView(
+                      column: col,
+                      color: _columnColors[col]!,
+                      ink: _columnInk[col]!,
+                      tasks: controller.byColumn(col),
+                      wipLimit: controller.wipLimits[col] ?? 999,
+                      onAdd: () => _openAddTaskSheet(context, controller),
+                      onMove: (String taskId, KanbanColumn target) =>
+                          controller.moveTask(taskId, target),
+                      onDelete: controller.deleteTask,
+                      onTogglePriority: controller.togglePriority,
+                      onToggleComplete: controller.toggleCompleted,
+                      onWipLimitChange: (int v) =>
+                          controller.setWipLimit(col, v),
+                    );
+
+                // Build eagerly: observables must be read synchronously
+                // inside Obx, not lazily from a ListView itemBuilder.
+                final List<Widget> columns =
+                    _columns.map(columnView).toList(growable: false);
+
+                if (narrow) {
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.all(8),
+                    children: <Widget>[
+                      for (int i = 0; i < columns.length; i++) ...<Widget>[
+                        if (i > 0) const SizedBox(width: 8),
+                        SizedBox(
+                          width: constraints.maxWidth * 0.85,
+                          child: columns[i],
+                        ),
+                      ],
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: columns
+                      .map(
+                        (Widget col) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: col,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                );
+              },
+            );
+          },
         ),
       ),
     );
@@ -467,6 +500,7 @@ class _TaskCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Semantics(
                 label: task.isCompleted

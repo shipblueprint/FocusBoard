@@ -271,18 +271,23 @@ class _Quadrant extends StatelessWidget {
                     color: quadrantColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Expanded(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
                         child: MyText.titleMedium(
                           EisenhowerConfig.getQuadrantName(quadrant),
                           fontWeight: 700,
                           color: quadrantInk,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       MyText.bodySmall(
                         EisenhowerConfig.getQuadrantDescription(quadrant),
                         color: quadrantInk,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

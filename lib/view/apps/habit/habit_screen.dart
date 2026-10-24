@@ -112,7 +112,12 @@ class HabitScreen extends StatelessWidget {
                             Row(children: <Widget>[
                               Icon(Icons.local_fire_department, color: accent, size: 14),
                               const SizedBox(width: 4),
-                              MyText.bodySmall('Streak', color: AppTheme.theme.hintColor, fontWeight: 500),
+                              Expanded(
+                                child: MyText.bodySmall('Streak',
+                                    color: AppTheme.theme.hintColor,
+                                    fontWeight: 500,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
                             ]),
                             const SizedBox(height: 4),
                             MyText.bodyMedium('$currentStreak days', fontWeight: 700),
@@ -130,7 +135,12 @@ class HabitScreen extends StatelessWidget {
                             Row(children: <Widget>[
                               Icon(Icons.emoji_events, color: accent, size: 14),
                               const SizedBox(width: 4),
-                              MyText.bodySmall('Best', color: AppTheme.theme.hintColor, fontWeight: 500),
+                              Expanded(
+                                child: MyText.bodySmall('Best',
+                                    color: AppTheme.theme.hintColor,
+                                    fontWeight: 500,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
                             ]),
                             const SizedBox(height: 4),
                             MyText.bodyMedium('$bestStreak days', fontWeight: 700),
@@ -148,7 +158,12 @@ class HabitScreen extends StatelessWidget {
                             Row(children: <Widget>[
                               Icon(Icons.task_alt, color: accent, size: 14),
                               const SizedBox(width: 4),
-                              MyText.bodySmall('Week', color: AppTheme.theme.hintColor, fontWeight: 500),
+                              Expanded(
+                                child: MyText.bodySmall('Week',
+                                    color: AppTheme.theme.hintColor,
+                                    fontWeight: 500,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
                             ]),
                             const SizedBox(height: 4),
                             MyText.bodyMedium('$weekActive/7', fontWeight: 700),
@@ -191,106 +206,144 @@ class HabitScreen extends StatelessWidget {
                       final int weekDone = habit.weekDone();
                       final List<(String, bool, bool)> weekDays =
                           habit.currentWeek();
+                      // Shared pieces of the habit card.
+                      final Widget checkbox = SizedBox(
+                        width: 52,
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: () =>
+                                controller.toggleDate(habit.id, today),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: done ? accent : Colors.transparent,
+                                border: Border.all(
+                                  color: done
+                                      ? accent
+                                      : AppTheme.theme.hintColor,
+                                  width: 2,
+                                ),
+                                boxShadow: done
+                                    ? <BoxShadow>[
+                                        BoxShadow(
+                                          color:
+                                              accent.withValues(alpha: 0.3),
+                                          blurRadius: 12,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: done
+                                  ? Icon(Icons.check,
+                                      color: accentInk, size: 22)
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      );
+                      final Widget nameStats = Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            MyText.bodyMedium(habit.name, fontWeight: 600),
+                            const SizedBox(height: 2),
+                            MyText.bodySmall(
+                              streak > 0
+                                  ? '🔥 $streak-day streak · $weekDone/7 this week'
+                                  : '$weekDone/7 this week',
+                              color: accent,
+                              fontWeight: 500,
+                              softWrap: true,
+                            ),
+                          ],
+                        ),
+                      );
+                      final List<Widget> dayCircles =
+                          List<Widget>.generate(7, (int j) {
+                        final (String dk, bool d, bool f) = weekDays[j];
+                        final bool isToday = dk == today;
+                        return _DayCircle(
+                          label: _dayLabels[j],
+                          done: d,
+                          isFuture: f,
+                          isToday: isToday,
+                          onTap: f
+                              ? null
+                              : () => controller.toggleDate(habit.id, dk),
+                        );
+                      });
+                      final Widget menu = SizedBox(
+                        width: 36,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(Icons.more_vert,
+                              color: AppTheme.theme.hintColor),
+                          onPressed: () => _confirmDelete(
+                              context, controller, habit.id, habit.name),
+                        ),
+                      );
+
                       return MyContainer(
                         padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                         borderRadiusAll: 12,
                         color: AppTheme.theme.colorScheme.surface,
-                        child: Row(
-                          children: <Widget>[
-                            // Checkbox
-                            SizedBox(
-                              width: 52,
-                              child: Center(
-                                child: GestureDetector(
-                                  onTap: () => controller.toggleDate(
-                                      habit.id, today),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: done ? accent : Colors.transparent,
-                                      border: Border.all(
-                                        color: done ? accent : AppTheme.theme.hintColor,
-                                        width: 2,
-                                      ),
-                                      boxShadow: done
-                                          ? <BoxShadow>[
-                                              BoxShadow(
-                                                color: accent.withValues(alpha: 0.3),
-                                                blurRadius: 12,
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: done
-                                        ? Icon(Icons.check,
-                                            color: accentInk, size: 22)
-                                        : null,
+                        child: LayoutBuilder(
+                          builder: (BuildContext context,
+                              BoxConstraints constraints) {
+                            // Narrow cards can't fit checkbox + name + 7
+                            // circles + menu on one line; give the circles
+                            // their own evenly spaced row below the name.
+                            final bool narrow =
+                                constraints.maxWidth < 560;
+                            if (narrow) {
+                              return Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      checkbox,
+                                      Expanded(child: nameStats),
+                                      menu,
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: dayCircles,
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
+                              children: <Widget>[
+                                checkbox,
+                                Expanded(child: nameStats),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      for (int j = 0; j < 7; j++) ...<Widget>[
+                                        if (j > 0)
+                                          const SizedBox(width: 4),
+                                        dayCircles[j],
+                                      ],
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ),
-                            // Name + stats
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    MyText.bodyMedium(habit.name,
-                                        fontWeight: 600),
-                                    const SizedBox(height: 2),
-                                    MyText.bodySmall(
-                                      streak > 0
-                                          ? '🔥 $streak-day streak · $weekDone/7 this week'
-                                          : '$weekDone/7 this week',
-                                      color: accent,
-                                      fontWeight: 500,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // 7-day grid
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: List<Widget>.generate(
-                                    7, (int j) {
-                                  final (String dk, bool d, bool f) =
-                                      weekDays[j];
-                                  final bool isToday = dk == today;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: _DayCircle(
-                                      label: _dayLabels[j],
-                                      done: d,
-                                      isFuture: f,
-                                      isToday: isToday,
-                                      onTap: f
-                                          ? null
-                                          : () => controller.toggleDate(
-                                              habit.id, dk),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                            // Menu
-                            SizedBox(
-                              width: 36,
-                              child:                                 IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: Icon(Icons.more_vert,
-                                    color: AppTheme.theme.hintColor),
-                                onPressed: () => _confirmDelete(
-                                    context, controller, habit.id, habit.name),
-                              ),
-                            ),
-                          ],
+                                menu,
+                              ],
+                            );
+                          },
                         ),
                       );
                     },
