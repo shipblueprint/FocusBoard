@@ -4,7 +4,7 @@ Living map of the codebase for whoever (human or agent) edits it next.
 Update it in the same change that alters anything described here; anything you
 deprecate or deliberately leave broken goes in [Pending gaps](#8-pending-gaps).
 
-Last reviewed: 2026-10-24 (brand palette applied to the 7 feature accents).
+Last reviewed: 2026-10-24 (Android Gradle migration landed; releases v1.0.1 Linux, v1.0.2 Android).
 
 ---
 
@@ -164,8 +164,13 @@ Recorded, not fixed — each is outside the change that surfaced it.
    `route.habit` and `route.analytics` in `routes.dart` have no `binding:`, so they only
    work after `AppLayout` has run `AppBinding`. They appear unused by the shell today.
 5. **`pubspec.yaml` version is `0.1.0+1`** while the published GitHub releases are `v1.0.x`.
-6. **Android/iOS/macOS application ids are still `com.example.henox`** — the FocusBoard
-   rename only reached `linux/CMakeLists.txt` (`io.github.shipblueprint.focusboard`).
+   The Android APK now published as `v1.0.2` carries that `0.1.0+1` as its versionCode and
+   versionName, because `build.gradle.kts` reads `flutter.versionCode`/`flutter.versionName`.
+6. **Application ids are still under `com.example`.** Android moved `com.example.henox` →
+   `com.example.focusboard` with the Kotlin DSL migration, iOS and macOS are unchanged, and only
+   `linux/CMakeLists.txt` carries the real identity (`io.github.shipblueprint.focusboard`).
+   Changing the Android id again makes the app a different application to Android, so existing
+   installs cannot be upgraded — see ticket 09 for that trade-off.
 7. **`_Quadrant` overflows its Column by 1px at 800×600.** Surfaced by the transfer widget
    test, which pumps the screen; unrelated to the AppBar action (no vertical height is
    added). The test therefore runs at a 1600×1200 surface instead of asserting on the
@@ -174,21 +179,26 @@ Recorded, not fixed — each is outside the change that surfaced it.
 8. **`lib/controller/my_controller.dart`, `lib/model/*`, and most of `lib/helpers/widgets/my_*`
    are unused boilerplate** from the template the app started from. Dead, but load-bearing
    for nothing; delete only as a deliberate cleanup, not as collateral.
-9. **Off-brand colours left on purpose by the accent pass.** The Habits tab still uses the
-   template teal (`AppColors.success` / `0xff1abc9c` family), the Kanban high-priority card
-   border is `Colors.orange.withValues(alpha: 0.6)`, and the Analytics screen keeps its own
-   chart palette apart from the `getQuadrantColor` line. The user scoped that pass to the 7
-   accents and the chrome; Analytics was explicitly deferred.
+9. **One off-brand colour survives the accent passes.** The Kanban high-priority card border is
+   `Colors.orange.withValues(alpha: 0.6)`. Habits was brought onto the palette afterwards through
+   `colorScheme.secondary` (rustClay + white ink in light, harvestGold + espresso ink in dark), and
+   Analytics turned out to have no hardcoded colours of its own — it reads `AppTheme.primaryColor`
+   and `getQuadrantColor`. The orange border stays because it is a severity signal rather than
+   decoration, in the same way `Colors.red` still marks destructive actions.
 10. **`AppColors` still carries the template `ColorGroup` registry** (`list`, `get`, `random`,
     `getColorByRating`) which nothing in the four tabs reads. The brand constants live in the
     same class, so deleting the registry means editing the file that owns the palette.
 11. **`AppTheme.createTheme()` is dead** — the app installs `AppTheme.theme`, so only the two
     `lightTheme`/`darkTheme` builders below it are on the colour path.
+12. **Untracked litter sits at the repo root and in `android/`:** `FocusBoard-linux-x64.tar.gz`,
+    `FocusBoard-windows-x64.zip` (published assets, duplicated locally), `android_old/` and
+    `pubspec.yaml.bak` (backups from the Android migration). None is ignored, so `git add -A`
+    would commit all of them. Delete or ignore deliberately; they are not evidence of anything.
 
 ## 9. Verifying a change
 
 ```
-/mnt/data/flutter/bin/flutter test                       # 28 tests as of 2026-10-24
+/mnt/data/flutter/bin/flutter test                       # 34 tests as of 2026-10-24
 /mnt/data/flutter/bin/flutter analyze --no-pub           # baseline is 3 info lints
 /mnt/data/gtkdev/flutter-linux-build.sh --release        # needs the GTK prefix until gtk3-devel is installed
 scripts/install-linux.sh                                 # build → ~/.local/share/focusboard + .desktop + icons
@@ -196,12 +206,23 @@ build/linux/x64/release/bundle/FocusBoard                # boots; AppBinding res
 ```
 
 Only `bundle/lib/libapp.so` (the Dart payload) changes for Dart-only edits — a stale-looking
-`FocusBoard` executable timestamp is normal. Confirm a rebuild took with
-`strings bundle/lib/libapp.so | grep '<new log line>'`. `scripts/install-linux.sh` refuses to
-install a bundle older than `lib/`, so a forgotten rebuild cannot reach the install.
+`FocusBoard` executable timestamp is normal, and the payload itself keeps its original mtime when
+Flutter reuses the cached AOT snapshot from `.dart_tool`, so compare md5 against the bundle rather
+than trusting timestamps. `scripts/install-linux.sh` refuses to install a bundle older than `lib/`,
+so a forgotten rebuild cannot reach the install.
+
+If the Linux build dies in CMake's generate step with *"Imported target PkgConfig::GTK includes
+non-existent path /usr/include/gtk-3.0"*, the `CMakeCache.txt` under `build/linux/x64/release/` was
+written against a GTK that no longer exists (this host has the gtk3 runtime but not gtk3-devel, so
+the wrapper's vendored prefix at `/mnt/data/gtkdev/root` is the only source of those headers).
+Move `build/linux` aside and reconfigure; do not chase the include path by hand.
 
 To eyeball a colour change on this GNOME host: GNOME's screenshot D-Bus is blocked and
 `xwininfo`/`xdotool`/`grim` are absent, but ImageMagick can grab a single window by id —
-`xprop -root _NET_CLIENT_LIST` to find it, then `magick x:0x600007 out.png`. A window taller
-than the screen hides the nav bar; `python3 -c` with `Xlib` (`pip install --user python-xlib`)
-can `configure(x=0, y=0)` it and drive `xtest.fake_input` clicks on the destinations.
+`xprop -root _NET_CLIENT_LIST` to find it, then `magick x:0x1200007 out.png`. Grabbing works
+reliably even when the window is partly obscured. Driving the UI does not: XTest button events
+synthesised with `python-xlib` land inconsistently under XWayland (some tab switches registered,
+later ones did not), and `xtest.fake_input(MotionNotify)` does not move the pointer at all —
+`root.warp_pointer` does. Treat synthetic clicks as unreliable and ask the user to check the tab
+they care about. The app must be launched with `GDK_BACKEND=x11` or it takes the Wayland path and
+never appears in the X11 window list.
